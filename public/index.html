@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Funeral · Azoma</title>
+  <meta name="description" content="Nominate the parts of Azoma you want laid to rest. Vote anonymously.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪦</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=IM+Fell+English:ital@0;1&family=Spectral+SC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="sky" aria-hidden="true">
+    <div class="stars"></div>
+    <div class="moon"></div>
+  </div>
+  <div class="lightning" aria-hidden="true"></div>
+
+  <div class="horizon" aria-hidden="true">
+    <svg viewBox="0 0 1440 400" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="hillFar" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#1c1428"/>
+          <stop offset="1" stop-color="#0e0a14"/>
+        </linearGradient>
+        <linearGradient id="hillNear" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0f0c14"/>
+          <stop offset="1" stop-color="#060508"/>
+        </linearGradient>
+      </defs>
+      <path d="M0 230 Q 180 170 360 215 T 720 200 T 1080 190 T 1440 210 V400 H0Z" fill="url(#hillFar)"/>
+      <!-- mausoleum -->
+      <g fill="#0c0a11">
+        <rect x="1040" y="150" width="120" height="80"/>
+        <path d="M1030 152 L1100 108 L1170 152Z"/>
+        <rect x="1090" y="88" width="20" height="22"/>
+        <rect x="1097" y="70" width="6" height="22"/>
+        <rect x="1090" y="76" width="20" height="6"/>
+        <rect x="1086" y="180" width="28" height="50" fill="#050407"/>
+      </g>
+      <!-- dead trees -->
+      <g stroke="#0b0910" stroke-linecap="round" fill="none">
+        <path d="M180 260 C 185 200 175 160 190 110" stroke-width="12"/>
+        <path d="M188 150 C 160 130 140 128 120 105" stroke-width="6"/>
+        <path d="M186 130 C 215 110 230 100 250 70" stroke-width="6"/>
+        <path d="M130 112 L 112 92" stroke-width="3"/>
+        <path d="M240 84 L 262 78" stroke-width="3"/>
+        <path d="M190 112 C 196 90 192 70 200 55" stroke-width="4"/>
+        <path d="M1320 250 C 1325 200 1310 170 1325 130" stroke-width="10"/>
+        <path d="M1322 170 C 1350 150 1365 150 1390 128" stroke-width="5"/>
+        <path d="M1318 150 C 1295 135 1285 120 1270 100" stroke-width="5"/>
+      </g>
+      <path d="M0 300 Q 240 255 520 285 T 1000 275 T 1440 290 V400 H0Z" fill="url(#hillNear)"/>
+      <!-- crosses and stones on the hill -->
+      <g fill="#060508">
+        <rect x="380" y="250" width="6" height="34"/><rect x="371" y="260" width="24" height="6"/>
+        <rect x="640" y="252" width="6" height="34"/><rect x="631" y="262" width="24" height="6"/>
+        <path d="M820 290 v-26 a14 14 0 0 1 28 0 v26z"/>
+        <path d="M900 286 v-20 a11 11 0 0 1 22 0 v20z"/>
+        <path d="M260 296 v-22 a12 12 0 0 1 24 0 v22z"/>
+        <rect x="1230" y="258" width="6" height="34"/><rect x="1221" y="268" width="24" height="6"/>
+      </g>
+      <!-- iron fence -->
+      <g fill="#050406">
+        <rect x="0" y="352" width="1440" height="6"/>
+        <rect x="0" y="384" width="1440" height="5"/>
+      </g>
+      <g id="fence" fill="#050406"></g>
+      <rect x="0" y="392" width="1440" height="8" fill="#050406"/>
+    </svg>
+  </div>
+
+  <div class="fog" aria-hidden="true"></div>
+  <div class="fog two" aria-hidden="true"></div>
+
+  <div class="drifting-reaper" aria-hidden="true">
+    <svg viewBox="0 0 120 160">
+      <path d="M20 40 L 20 36 Q 60 0 104 26 Q 70 18 40 40 Z" fill="#9aa0a8"/>
+      <rect x="27" y="30" width="4" height="125" fill="#2a2030" transform="rotate(-6 29 90)"/>
+      <path d="M60 30 Q 38 34 38 66 Q 36 100 26 150 Q 46 140 60 152 Q 74 140 94 150 Q 84 100 82 66 Q 82 34 60 30Z" fill="#0b0910"/>
+      <ellipse cx="60" cy="56" rx="11" ry="13" fill="#000"/>
+      <circle cx="56" cy="55" r="2" fill="#7dff9a"/><circle cx="64" cy="55" r="2" fill="#7dff9a"/>
+    </svg>
+  </div>
+
+  <main class="wrap">
+    <header class="hero">
+      <div class="eyebrow">Azoma · Ceremony of Retirement</div>
+      <h1 class="title" id="title">The Funeral
+        <span class="drip" style="left:14%;animation-delay:0s"></span>
+        <span class="drip" style="left:47%;animation-delay:1.4s"></span>
+        <span class="drip" style="left:81%;animation-delay:2.6s"></span>
+      </h1>
+      <p class="subtitle">Every product carries dead weight. Name the part of Azoma that should die, and let the company decide its fate. All votes are anonymous.</p>
+    </header>
+
+    <section class="altar" aria-labelledby="nominate-h">
+      <h2 id="nominate-h">🪓 Sentence a feature to death</h2>
+      <form id="nominate" autocomplete="off" novalidate>
+        <div class="field">
+          <label for="feature">The condemned <span class="count" id="featureCount">0/80</span></label>
+          <input id="feature" name="feature" maxlength="80" placeholder="e.g. The legacy CSV exporter" required>
+        </div>
+        <div class="field">
+          <label for="reason">Its crimes (optional) <span class="count" id="reasonCount">0/280</span></label>
+          <textarea id="reason" name="reason" maxlength="280" placeholder="Why should it die? Nobody uses it, it breaks every sprint, it haunts our on-call..."></textarea>
+        </div>
+        <p class="form-error" id="formError" role="alert"></p>
+        <div class="altar-foot">
+          <span class="note">Nominations are anonymous. Your vote is cast automatically.</span>
+          <button class="btn btn-blood" type="submit" id="submitBtn">Execute it</button>
+        </div>
+      </form>
+    </section>
+
+    <section aria-labelledby="death-row-h">
+      <div class="section-head">
+        <h2 id="death-row-h">Death Row</h2>
+        <div class="toolbar" role="group" aria-label="Sort graves">
+          <button class="chip" data-sort="votes" aria-pressed="true">Most doomed</button>
+          <button class="chip" data-sort="new" aria-pressed="false">Freshly dug</button>
+        </div>
+      </div>
+      <div class="hint" style="color:var(--muted);font-style:italic">Vote for the graves you want filled. Click again to spare one.</div>
+      <div class="graveyard" id="graveyard" aria-live="polite"></div>
+    </section>
+
+    <section id="buriedSection" aria-labelledby="buried-h" hidden>
+      <div class="section-head">
+        <h2 id="buried-h">Laid to Rest</h2>
+        <span class="hint">Features the company has officially retired.</span>
+      </div>
+      <div class="buried-list" id="buriedList"></div>
+    </section>
+  </main>
+
+  <footer>
+    No names. No emails. No witnesses. &nbsp;·&nbsp; <a href="/admin">The Undertaker's Office</a>
+  </footer>
+
+  <!-- Execution stage -->
+  <div class="execution" id="execution" aria-hidden="true">
+    <button class="skip" id="skipExec" type="button">Skip ›</button>
+    <div class="stage" id="stage">
+      <svg viewBox="0 0 800 500" class="stage-back" aria-hidden="true">
+        <defs>
+          <radialGradient id="spot" cx="50%" cy="80%" r="60%">
+            <stop offset="0" stop-color="#5a1a24" stop-opacity="0.75"/>
+            <stop offset="1" stop-color="#000" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#3a2414"/>
+            <stop offset="0.5" stop-color="#5c3a20"/>
+            <stop offset="1" stop-color="#2a190d"/>
+          </linearGradient>
+          <radialGradient id="woodTop" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#a77b4c"/>
+            <stop offset="0.6" stop-color="#8a6238"/>
+            <stop offset="1" stop-color="#5c3a20"/>
+          </radialGradient>
+          <radialGradient id="groundFade" cx="50%" cy="40%" r="50%">
+            <stop offset="0" stop-color="#140a0c"/>
+            <stop offset="0.7" stop-color="#0a0507" stop-opacity="0.9"/>
+            <stop offset="1" stop-color="#000" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="eyeGlow">
+            <stop offset="0" stop-color="#ff5a5a"/>
+            <stop offset="1" stop-color="#ff0000" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="ectoGlow">
+            <stop offset="0" stop-color="#b8ffc8"/>
+            <stop offset="1" stop-color="#7dff9a" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="400" cy="400" rx="420" ry="190" fill="url(#spot)"/>
+        <ellipse cx="400" cy="440" rx="430" ry="70" fill="url(#groundFade)"/>
+        <!-- chopping block -->
+        <g>
+          <path d="M322 336 L318 424 Q400 440 482 424 L478 336 Z" fill="url(#wood)"/>
+          <path d="M340 350 L338 420 M372 344 L371 428 M430 344 L431 428 M462 350 L464 420" stroke="#20130a" stroke-width="2" opacity="0.6"/>
+          <ellipse cx="400" cy="336" rx="80" ry="17" fill="url(#woodTop)"/>
+          <ellipse cx="400" cy="336" rx="55" ry="11" fill="none" stroke="#6a4626" stroke-width="1.5"/>
+          <ellipse cx="400" cy="336" rx="30" ry="6" fill="none" stroke="#6a4626" stroke-width="1.5"/>
+          <path d="M360 332 q 10 6 25 2 q 14 -4 30 3" stroke="#6b0f1c" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.8"/>
+          <path d="M392 336 q 2 22 -1 40" stroke="#6b0f1c" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.7"/>
+        </g>
+
+        <!-- Executioner body -->
+        <g id="executionerBody">
+          <path d="M118 422 L134 262 Q140 222 172 214 L206 214 Q236 222 240 262 L254 422 Z" fill="#141016"/>
+          <path d="M150 230 Q186 250 224 230 L228 300 Q188 312 146 300 Z" fill="#c09072"/>
+          <path d="M160 245 q 12 10 26 0 M176 262 q 10 8 22 0" stroke="#8d5f44" stroke-width="2" fill="none"/>
+          <rect x="136" y="300" width="104" height="13" fill="#3a2410"/>
+          <rect x="182" y="299" width="16" height="15" fill="#8a7a50"/>
+          <path d="M150 230 Q140 260 134 262" stroke="#141016" stroke-width="10" fill="none"/>
+          <!-- left (rear) arm hanging -->
+          <path d="M150 236 Q128 280 136 326" stroke="#c09072" stroke-width="18" stroke-linecap="round" fill="none"/>
+          <!-- hood -->
+          <path d="M186 96 L144 206 Q146 232 187 234 Q228 232 230 206 Z" fill="#1d0c10"/>
+          <path d="M186 96 L160 180" stroke="#2c1318" stroke-width="3"/>
+          <ellipse cx="174" cy="178" rx="13" ry="9" fill="#000"/>
+          <ellipse cx="200" cy="178" rx="13" ry="9" fill="#000"/>
+          <circle cx="174" cy="178" r="10" fill="url(#eyeGlow)" class="glow-eye"/>
+          <circle cx="200" cy="178" r="10" fill="url(#eyeGlow)" class="glow-eye"/>
+          <circle cx="174" cy="178" r="2.6" fill="#ffdcdc"/>
+          <circle cx="200" cy="178" r="2.6" fill="#ffdcdc"/>
+        </g>
+
+        <!-- Grim reaper body -->
+        <g id="reaperBody">
+          <path d="M560 422 Q574 300 586 250 Q596 214 630 204 Q664 214 674 250 Q688 320 704 422 L690 410 L676 424 L661 408 L646 424 L631 408 L616 424 L601 408 L586 424 L572 410 Z" fill="#0d0b12"/>
+          <path d="M600 260 Q630 290 660 260" stroke="#1d1924" stroke-width="3" fill="none"/>
+          <path d="M594 300 Q630 330 668 300" stroke="#1d1924" stroke-width="3" fill="none"/>
+          <path d="M630 116 Q586 126 584 186 Q586 228 630 234 Q674 228 676 186 Q674 126 630 116 Z" fill="#17131e"/>
+          <ellipse cx="630" cy="184" rx="27" ry="34" fill="#000"/>
+          <ellipse cx="630" cy="180" rx="17" ry="20" fill="#e6dfcc"/>
+          <path d="M618 194 q 12 14 24 0 v 8 q -12 8 -24 0z" fill="#e6dfcc"/>
+          <circle cx="623" cy="177" r="5.5" fill="#000"/>
+          <circle cx="637" cy="177" r="5.5" fill="#000"/>
+          <circle cx="623" cy="177" r="9" fill="url(#ectoGlow)" class="glow-eye"/>
+          <circle cx="637" cy="177" r="9" fill="url(#ectoGlow)" class="glow-eye"/>
+          <circle cx="623" cy="177" r="1.8" fill="#d4ffe0"/>
+          <circle cx="637" cy="177" r="1.8" fill="#d4ffe0"/>
+          <path d="M628 186 l2 -5 l2 5z" fill="#000"/>
+          <path d="M622 197 v5 M626 198 v5 M630 198 v5 M634 198 v5 M638 197 v5" stroke="#000" stroke-width="1"/>
+        </g>
+      </svg>
+
+      <div class="condemned" id="condemned"></div>
+
+      <svg viewBox="0 0 800 500" class="stage-front" aria-hidden="true" style="z-index:3;pointer-events:none">
+        <defs>
+          <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#5c6068"/>
+            <stop offset="0.55" stop-color="#b9bec8"/>
+            <stop offset="1" stop-color="#f4f6fa"/>
+          </linearGradient>
+          <linearGradient id="steel2" x1="1" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#4a4d55"/>
+            <stop offset="0.6" stop-color="#aeb3bd"/>
+            <stop offset="1" stop-color="#eef1f6"/>
+          </linearGradient>
+        </defs>
+        <!-- executioner's arm and axe; rotates around the shoulder (226,236) -->
+        <g id="axeArm">
+          <rect x="296" y="229" width="150" height="13" rx="5" fill="#6b4423"/>
+          <rect x="296" y="229" width="150" height="4" rx="2" fill="#8a5a30" opacity="0.7"/>
+          <path d="M404 222 L440 222 L444 248 Q466 270 458 304 Q422 288 386 304 Q378 270 400 248 Z" fill="url(#steel)" stroke="#2c2e33" stroke-width="2"/>
+          <path d="M386 304 Q422 288 458 304" stroke="#ffffff" stroke-width="2.5" fill="none" opacity="0.9"/>
+          <path d="M398 296 q 10 -6 20 2" stroke="#8b0f1f" stroke-width="3" fill="none" class="axe-blood" opacity="0"/>
+          <path d="M226 236 L304 236" stroke="#c09072" stroke-width="20" stroke-linecap="round"/>
+          <circle cx="302" cy="236" r="12" fill="#b38366"/>
+        </g>
+        <!-- reaper's arm and scythe; rotates around the shoulder (592,242) -->
+        <g id="scytheArm">
+          <rect x="300" y="237" width="262" height="8" rx="4" fill="#3b2a1d"/>
+          <path d="M306 236 Q 286 300 356 344 Q 316 296 320 246 Z" fill="url(#steel2)" stroke="#25262b" stroke-width="2"/>
+          <path d="M306 238 Q 290 300 356 344" stroke="#ffffff" stroke-width="2" fill="none" opacity="0.85"/>
+          <path d="M592 242 L548 242" stroke="#0d0b12" stroke-width="22" stroke-linecap="round"/>
+          <path d="M548 242 L524 241" stroke="#e6dfcc" stroke-width="6" stroke-linecap="round"/>
+          <path d="M526 236 l -8 -3 M526 246 l -8 4 M524 241 l -10 0" stroke="#e6dfcc" stroke-width="3" stroke-linecap="round"/>
+        </g>
+      </svg>
+    </div>
+    <div class="verdict">
+      <div class="big" id="verdictBig">Executed</div>
+      <div class="small" id="verdictSmall"></div>
+    </div>
+  </div>
+  <div class="screen-flash" id="screenFlash"></div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="/ambience.js"></script>
+  <script src="/execution.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Undertaker's Office · The Funeral</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚰️</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=IM+Fell+English:ital@0;1&family=Spectral+SC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="sky" aria-hidden="true">
+    <div class="stars"></div>
+    <div class="moon"></div>
+  </div>
+  <div class="lightning" aria-hidden="true"></div>
+  <div class="fog" aria-hidden="true"></div>
+
+  <main class="wrap">
+    <header class="hero" style="padding-bottom:0">
+      <div class="eyebrow">The Funeral · Admin</div>
+      <h1 class="title" style="font-size:clamp(2.6rem,8vw,5rem)">Undertaker's Office</h1>
+      <p class="subtitle">See the full ledger of the condemned. Remove proposals, or lay features to rest once they are retired.</p>
+    </header>
+
+    <section class="admin-panel login-box" id="loginBox" hidden>
+      <form id="loginForm" class="field">
+        <label for="password">Speak the incantation</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="Admin password" required>
+        <p class="form-error" id="loginError" role="alert"></p>
+        <button class="btn btn-blood" type="submit" style="width:100%">Enter the crypt</button>
+      </form>
+    </section>
+
+    <section class="admin-panel" id="dash" hidden>
+      <div class="stats" id="stats"></div>
+      <div class="admin-head">
+        <h2>The Ledger</h2>
+        <div class="actions">
+          <a class="btn btn-ghost btn-sm" href="/" style="text-decoration:none">View graveyard</a>
+          <button class="btn btn-ghost btn-sm" id="refresh" type="button">Refresh</button>
+          <button class="btn btn-ghost btn-sm" id="logout" type="button">Leave crypt</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="ledger">
+          <thead>
+            <tr>
+              <th style="width:44px">#</th>
+              <th>Condemned feature</th>
+              <th style="width:150px">Votes</th>
+              <th style="width:110px">Status</th>
+              <th style="width:120px">Nominated</th>
+              <th style="width:250px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="hint" style="color:var(--muted);font-style:italic;margin-top:16px">Votes are anonymous. This office sees counts only, never who voted or who nominated.</p>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="/ambience.js"></script>
+  <script src="/admin.js"></script>
+</body>
+</html>
