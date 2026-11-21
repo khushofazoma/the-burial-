@@ -23,6 +23,25 @@
 
   if (reduced) return;
 
+  // Will-o'-wisps drifting low over the graves
+  for (let i = 0; i < 7; i++) {
+    const w = document.createElement('div');
+    w.className = 'wisp';
+    const r = (n) => (Math.random() - 0.5) * n + 'px';
+    w.style.left = 5 + Math.random() * 90 + 'vw';
+    w.style.bottom = 4 + Math.random() * 26 + 'vh';
+    w.style.setProperty('--x1', r(160));
+    w.style.setProperty('--y1', r(80));
+    w.style.setProperty('--x2', r(220));
+    w.style.setProperty('--y2', r(100));
+    w.style.setProperty('--x3', r(160));
+    w.style.setProperty('--y3', r(80));
+    w.style.setProperty('--dur', 12 + Math.random() * 14 + 's');
+    w.style.setProperty('--blink', 4 + Math.random() * 5 + 's');
+    w.style.setProperty('--delay', -Math.random() * 20 + 's');
+    document.body.appendChild(w);
+  }
+
   // Bats
   const batSvg =
     '<svg viewBox="0 0 64 30"><path d="M32 12 C 30 8 28 8 27 10 C 22 4 12 2 0 8 C 8 9 10 14 10 18 C 14 14 20 15 22 20 C 24 16 28 15 32 20 C 36 15 40 16 42 20 C 44 15 50 14 54 18 C 54 14 56 9 64 8 C 52 2 42 4 37 10 C 36 8 34 8 32 12Z" fill="#050407"/></svg>';

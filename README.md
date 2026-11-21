@@ -4,8 +4,9 @@ A spooky graveyard where Azoma staff nominate parts of the product to retire, an
 
 ## What it does
 
-- **Nominate**: name a feature and (optionally) its crimes. Submitting triggers an execution scene: either a hooded executioner splits it with an axe, or the Grim Reaper slices it with a scythe. The feature's soul floats away and a new tombstone rises in the graveyard.
-- **Vote**: click "Kill it" on any tombstone. Click again to spare it. Graves are ranked by votes; the top one gets candles and a "Next to die" badge. The page refreshes counts every 10 seconds, so it works live on a shared screen.
+- **Nominate**: name a feature and (optionally) its crimes. Submitting triggers an execution scene: either a hooded executioner splits it with an axe, or the Grim Reaper slices it with a scythe. A drumroll builds as the lights close in, then a hit-stop, slow-motion blood spray, the card halves crash to the ground and the feature's soul floats away. A new tombstone then bursts out of the earth in the graveyard.
+- **Sound**: effects are synthesised in the browser (no audio files). Toggle with the speaker button in the top-left corner; the choice is remembered.
+- **Vote**: click "Kill it" on any tombstone. A scythe sweeps across it and a soul escapes. Click again to spare it. Tombstones crack more as their votes pile up. Graves are ranked by votes; the top one gets candles and a "Next to die" badge. The page refreshes counts every 10 seconds, so it works live on a shared screen.
 - **Laid to Rest**: features the admin marks as retired move to a memorial section.
 - **Admin dashboard** at `/admin`: password protected. Shows every proposal with vote counts and a bar chart, plus actions to lay to rest, resurrect, reset votes, or remove.
 
@@ -49,9 +50,12 @@ Any host that runs Node and keeps a persistent disk works (Render, Railway, Fly.
 server.js            Express API + JSON file storage
 public/index.html    Graveyard page and execution stage
 public/style.css     All styling and keyframe animations
-public/execution.js  Axe / scythe execution sequence
-public/ambience.js   Bats, fog, lightning, passing reaper
+public/execution.js  Axe / scythe execution sequence (camera, lighting, particle canvas, physics)
+public/sfx.js        Synthesised sound effects
+public/ambience.js   Bats, will-o'-wisps, lightning, passing reaper
 public/app.js        Nominating, voting, rendering graves
 public/admin.html    Admin dashboard
 public/admin.js
 ```
+
+All animation respects the operating system's "reduce motion" setting.
