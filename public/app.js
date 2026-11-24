@@ -39,6 +39,9 @@
   ];
   const crackLevel = (votes) => [2, 4, 7, 11].filter((t) => votes >= t).length;
   const sfx = () => window.SFX;
+  // Matches attempts to nominate the company itself ("Azoma", "the whole of Azoma", "azoma.ai").
+  // Keep in sync with server.js.
+  const MOTHERSHIP = /^\s*(?:the\s+)?(?:whole\s+(?:of\s+)?|entire\s+|all\s+of\s+)?(?:the\s+)?azoma(?:\.ai)?(?:\s+(?:itself|as\s+a\s+whole|the\s+company|company|platform|app|inc\.?|ltd\.?))?\s*[!.?]*\s*$/i;
 
   // ----------------------------------------------------------------- utils
 
@@ -474,6 +477,15 @@
     submitBtn.disabled = true;
     busy = true;
     if (sfx()) sfx().unlock();
+    // Easter egg: nobody kills the mothership. Nothing is saved.
+    if (MOTHERSHIP.test(feature)) {
+      form.reset();
+      updateCounts();
+      await window.Execution.play(feature, { mothership: true });
+      busy = false;
+      submitBtn.disabled = false;
+      return;
+    }
     try {
       const created = await api('/api/proposals', {
         method: 'POST',

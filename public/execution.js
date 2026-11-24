@@ -41,6 +41,8 @@
       rest: -50,
       raised: -140,
       strike: 9,
+      contact: -24, // blade meets the top of the card without cutting it
+      dropVx: -95,
       leanBack: -5,
       leanFwd: 7,
       floaty: false,
@@ -63,6 +65,8 @@
       rest: 60,
       raised: 98,
       strike: 3,
+      contact: 33,
+      dropVx: 105,
       leanBack: 5,
       leanFwd: -7,
       floaty: true,
@@ -87,6 +91,10 @@
   ];
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const NS = 'http://www.w3.org/2000/svg';
+  const wordmark = new Image();
+  wordmark.src = '/brand/azoma-wordmark-white-tight.svg';
+  wordmark.alt = 'Azoma';
   let lastVariant = Math.random() < 0.5 ? 'axe' : 'scythe';
 
   // ------------------------------------------------------------------ state
@@ -103,6 +111,8 @@
     dark: 0.35,
     radius: 34,
     red: 0,
+    violet: 0,
+    drop: null,
     timeScale: 1,
     trailOn: false,
     trail: [],
@@ -625,6 +635,8 @@
     light.style.setProperty('--r', S.radius.toFixed(2) + '%');
     light.style.setProperty('--red', S.red.toFixed(3));
     S.red = Math.max(0, S.red - dt * 0.9);
+    light.style.setProperty('--violet', S.violet.toFixed(3));
+    S.violet = Math.max(0, S.violet - dt * 0.3);
   }
 
   // ------------------------------------------------------------------ loop
@@ -651,6 +663,7 @@
     }
     stepParticles(dt);
     stepPieces(dt);
+    stepDrop(dt);
     applyCamera(S.t, realDt);
     drawScene();
     requestAnimationFrame(loop);
@@ -707,15 +720,16 @@
     });
   }
 
-  function verdictWord(word) {
+  function verdictWord(word, holy = false) {
     big.replaceChildren();
+    big.classList.toggle('holy', holy);
     [...word.toUpperCase()].forEach((ch, i) => {
       const s = document.createElement('span');
       s.className = 'l';
       s.textContent = ch;
       s.style.setProperty('--i', i);
       s.style.setProperty('--r', rand(-14, 14).toFixed(1) + 'deg');
-      if (Math.random() < 0.45) {
+      if (!holy && Math.random() < 0.45) {
         const d = document.createElement('i');
         d.className = 'dr';
         d.style.left = rand(25, 65).toFixed(0) + '%';
@@ -786,6 +800,128 @@
     setTimeout(() => !skipped && sx && sx.bell(), 380);
   }
 
+  // ------------------------------------------------------------------ the mothership (easter egg)
+
+  // The weapon leaves the hand: clone it into world space and let it fall.
+  function startDrop(v) {
+    const weapon = v.arm.querySelector('.weapon');
+    const inner = document.createElementNS(NS, 'g');
+    inner.setAttribute('transform', `${v.rig.getAttribute('transform')} ${v.arm.getAttribute('transform')}`);
+    inner.appendChild(weapon.cloneNode(true));
+    const outer = document.createElementNS(NS, 'g');
+    outer.appendChild(inner);
+    v.rig.parentNode.appendChild(outer);
+    weapon.style.visibility = 'hidden';
+    cleanupFns.push(() => {
+      outer.remove();
+      weapon.style.visibility = '';
+    });
+    const c = weaponPoint(v, v.trail[1]);
+    S.drop = {
+      el: outer,
+      cx: c[0],
+      cy: c[1],
+      x: 0,
+      y: 0,
+      vx: v.dropVx,
+      vy: -320,
+      r: 0,
+      vr: v.dropVx > 0 ? rand(220, 320) : rand(-320, -220),
+      ground: rand(442, 452),
+      bounces: 0,
+      rest: false,
+    };
+  }
+
+  function stepDrop(dt) {
+    const d = S.drop;
+    if (!d || d.rest) return;
+    d.vy += 1500 * dt;
+    d.x += d.vx * dt;
+    d.y += d.vy * dt;
+    d.r += d.vr * dt;
+    if (d.cy + d.y > d.ground && d.vy > 0) {
+      d.y = d.ground - d.cy;
+      d.bounces++;
+      const sx = sfx();
+      if (sx) sx.clatter(1 / d.bounces);
+      spawnDust(d.cx + d.x, d.ground, 5, 25);
+      S.trauma = Math.max(S.trauma, 0.18 / d.bounces);
+      if (d.bounces > 2 || d.vy < 160) {
+        d.rest = true;
+      } else {
+        d.vy = -d.vy * 0.35;
+        d.vx *= 0.5;
+        d.vr *= 0.4;
+      }
+    }
+    d.el.setAttribute('transform', `translate(${d.x.toFixed(1)} ${d.y.toFixed(1)}) rotate(${d.r.toFixed(1)} ${d.cx.toFixed(1)} ${d.cy.toFixed(1)})`);
+  }
+
+  function holyBeam() {
+    const k = scale;
+    const b = document.createElement('div');
+    b.className = 'holy-beam';
+    Object.assign(b.style, {
+      left: (CARD.x + CARD.w / 2) * k + 'px',
+      width: CARD.w * 0.9 * k + 'px',
+      height: `calc(60% + ${(CARD.y + CARD.h) * k}px)`,
+    });
+    camera.insertBefore(b, card);
+    cleanupFns.push(() => b.remove());
+    b.animate(
+      [
+        { opacity: 0, transform: 'translateX(-50%) scaleX(0.2)' },
+        { opacity: 1, transform: 'translateX(-50%) scaleX(1)', offset: 0.15 },
+        { opacity: 0.55, transform: 'translateX(-50%) scaleX(0.9)' },
+      ],
+      { duration: 2600, easing: 'ease-out', fill: 'forwards' }
+    );
+  }
+
+  function impactMothership(v) {
+    const sx = sfx();
+    if (sx) {
+      sx.clang();
+      setTimeout(() => !skipped && sx.choir(), 220);
+    }
+    flashWhite(0.9, 220);
+    S.violet = 0.42;
+    S.trauma = 0.8;
+    S.zoomPunch = 0.06;
+    overlay.classList.add('mothership-hit');
+    card.classList.remove('trembling');
+    card.classList.add('shielded');
+    if (!reduced) {
+      const tip = weaponPoint(v, v.trail[1]);
+      spawnSparks(tip[0], tip[1], 80);
+      const cx = CARD.x + CARD.w / 2;
+      const cy = CARD.y + CARD.h / 2;
+      S.rings.push({ x: cx, y: cy, r: 260, squash: 0.62, width: 5, life: 0.9, age: 0, alpha: 0.8, color: 'rgba(205,185,255,A)' });
+      S.rings.push({ x: cx, y: cy, r: 180, squash: 0.62, width: 9, life: 0.7, age: 0, alpha: 0.6, color: 'rgba(140,90,240,A)' });
+      S.rings.push({ x: cx, y: cy, r: 120, squash: 0.62, width: 12, life: 0.5, age: 0, alpha: 0.5, color: 'rgba(255,255,255,A)' });
+    }
+    holyBeam();
+    verdictWord('Immortal', true);
+    small.classList.remove('show');
+  }
+
+  function vibrate(ms, amp, freq, grow = false) {
+    const t0 = performance.now();
+    return new Promise((resolve) => {
+      (function tick(now) {
+        if (skipped) return resolve();
+        const e = Math.min(1, (now - t0) / ms);
+        S.tremble = Math.sin(now * freq) * amp * (grow ? e : 1 - e);
+        if (e < 1) requestAnimationFrame(tick);
+        else resolve();
+      })(t0);
+    }).then(() => {
+      S.tremble = 0;
+      check();
+    });
+  }
+
   // ------------------------------------------------------------------ lifecycle
 
   function reset() {
@@ -803,10 +939,14 @@
     S.dark = 0.35;
     S.radius = 34;
     S.red = 0;
+    S.violet = 0;
+    S.drop = null;
     S.timeScale = 1;
     S.tremble = 0;
     card.style.visibility = '';
-    card.classList.remove('drop', 'trembling');
+    card.classList.remove('drop', 'trembling', 'mothership', 'shielded');
+    overlay.classList.remove('mothership-hit');
+    big.classList.remove('holy');
     big.classList.remove('show');
     big.replaceChildren();
     small.classList.remove('show');
@@ -845,7 +985,15 @@
     if (S.running) sizeCanvas();
   });
 
-  async function play(text) {
+  async function windUp(v, sx) {
+    if (sx) sx.drumroll(1.35);
+    drift({ zoom: 1.08, dark: 0.78, radius: 20 }, 1500, ease.inOut);
+    await tween({ angle: v.raised, lean: v.leanBack }, 950, ease.inOut);
+    await vibrate(380, 1.4, 0.09, true); // shudder builds at the top
+  }
+
+  async function play(text, opts = {}) {
+    const mothership = !!opts.mothership;
     reset();
     skipped = false;
     lastVariant = lastVariant === 'axe' ? 'scythe' : 'axe';
@@ -859,7 +1007,12 @@
     }
     S.angle = v.rest;
     S.lean = 0;
-    card.textContent = text;
+    if (mothership) {
+      card.replaceChildren(wordmark.cloneNode());
+      card.classList.add('mothership');
+    } else {
+      card.textContent = text;
+    }
     overlay.classList.add('open');
     overlay.setAttribute('aria-hidden', 'false');
     sizeCanvas();
@@ -880,33 +1033,54 @@
       spawnDust(400, 334, 12, 90);
       await sleep(250);
       card.classList.remove('drop');
-      card.classList.add('trembling');
+      if (!mothership) card.classList.add('trembling');
       small.textContent = v.intro;
       small.classList.add('show');
 
-      if (reduced) {
+      if (mothership) {
+        // Easter egg: the blade bounces off and the weapon is knocked away.
+        if (reduced) {
+          await sleep(400);
+          S.angle = v.contact;
+          impactMothership(v);
+          small.textContent = 'The mothership cannot be killed.';
+          small.classList.add('show');
+          await sleep(2800);
+        } else {
+          await windUp(v, sx);
+          if (sx) sx.whoosh(0.16);
+          S.trailOn = true;
+          const dir = Math.sign(v.strike - v.raised);
+          await tween({ angle: v.contact, lean: v.leanFwd }, 135, ease.inCubic);
+          S.timeScale = 0;
+          impactMothership(v);
+          S.zoom = 1.08;
+          await sleep(120);
+          S.trailOn = false;
+          S.timeScale = 0.3;
+          drift({ timeScale: 1 }, 600, ease.inCubic);
+          drift({ zoom: 1.0, dark: 0.45, radius: 32 }, 1200, ease.outCubic);
+          // recoil, the arm rings like a struck bell, and the weapon flies loose
+          setTimeout(() => !skipped && startDrop(v), 300);
+          await Promise.all([
+            tween({ angle: v.contact - dir * 80, lean: v.leanBack * 1.8 }, 360, ease.outBack),
+            vibrate(900, 5, 0.32),
+          ]);
+          small.textContent = 'The mothership cannot be killed.';
+          small.classList.add('show');
+          await sleep(1300);
+          // the figure lowers an empty hand
+          await tween({ angle: v.rest, lean: 0 }, 1000, ease.inOut);
+          await sleep(1000);
+        }
+      } else if (reduced) {
         await sleep(400);
         S.angle = v.strike;
         impact(v, text);
         await sleep(2600);
       } else {
         // anticipation: wind up, lean back, lights close in, camera creeps forward
-        if (sx) sx.drumroll(1.35);
-        drift({ zoom: 1.08, dark: 0.78, radius: 20 }, 1500, ease.inOut);
-        await tween({ angle: v.raised, lean: v.leanBack }, 950, ease.inOut);
-        // tremble at the top
-        const t0 = performance.now();
-        await new Promise((resolve) => {
-          wake = resolve;
-          (function tr(now) {
-            if (skipped) return resolve();
-            const e = (now - t0) / 380;
-            S.tremble = Math.sin(now * 0.09) * 1.4 * e;
-            if (e < 1) requestAnimationFrame(tr);
-            else resolve();
-          })(t0);
-        }).then(check);
-        S.tremble = 0;
+        await windUp(v, sx);
 
         // the swing
         if (sx) sx.whoosh(0.16);

@@ -10,6 +10,10 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const SECURE_COOKIES = process.env.SECURE_COOKIES === 'true';
 
+// Nominating the company itself is an easter egg handled in the browser; never store it.
+// Keep in sync with public/app.js.
+const MOTHERSHIP = /^\s*(?:the\s+)?(?:whole\s+(?:of\s+)?|entire\s+|all\s+of\s+)?(?:the\s+)?azoma(?:\.ai)?(?:\s+(?:itself|as\s+a\s+whole|the\s+company|company|platform|app|inc\.?|ltd\.?))?\s*[!.?]*\s*$/i;
+
 const MAX_FEATURE = 80;
 const MAX_REASON = 280;
 const VOTER_COOKIE = 'funeral_voter';
@@ -223,6 +227,9 @@ app.post('/api/proposals', (req, res) => {
   const reason = clean(req.body && req.body.reason, MAX_REASON);
   if (feature.length < 2) {
     return res.status(400).json({ error: 'Name the part of the tool you want dead.' });
+  }
+  if (MOTHERSHIP.test(feature)) {
+    return res.status(422).json({ error: 'The mothership cannot be killed.', mothership: true });
   }
   const dupe = db.proposals.find(
     (p) => p.status === 'open' && p.feature.toLowerCase() === feature.toLowerCase()

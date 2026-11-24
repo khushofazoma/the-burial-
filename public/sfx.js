@@ -182,6 +182,64 @@
       tone(t, 1.2, { freq: 46, freqEnd: 34, gain: 0.35, attack: 0.2 });
     },
 
+    // Blade on something it cannot cut: bright inharmonic ring.
+    clang() {
+      if (!ready()) return;
+      const t = ctx.currentTime;
+      [1, 2.76, 5.4, 8.93, 13.3].forEach((m, i) => {
+        tone(t, 1.6 - i * 0.22, { freq: 540 * m, gain: 0.32 / (i + 1), attack: 0.002 });
+      });
+      noise(t, 0.06, { type: 'highpass', freq: 4500, gain: 0.6 });
+      tone(t, 0.25, { freq: 200, freqEnd: 90, gain: 0.4 });
+    },
+
+    // A dropped weapon bouncing on stone; intensity 0..1.
+    clatter(intensity = 1) {
+      if (!ready()) return;
+      const t = ctx.currentTime;
+      for (let i = 0; i < 3; i++) {
+        const tt = t + i * (0.05 + Math.random() * 0.06);
+        const f = 700 + Math.random() * 900;
+        tone(tt, 0.25, { freq: f, gain: 0.12 * intensity, attack: 0.002 });
+        tone(tt, 0.2, { freq: f * 2.7, gain: 0.05 * intensity, attack: 0.002 });
+      }
+      noise(t, 0.08, { type: 'lowpass', freq: 900, gain: 0.35 * intensity });
+    },
+
+    // A held major chord with gentle vibrato.
+    choir() {
+      if (!ready()) return;
+      const t = ctx.currentTime;
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 2200;
+      lp.connect(master);
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.frequency.value = 5.2;
+      lfoGain.gain.value = 3;
+      lfo.connect(lfoGain);
+      lfo.start(t);
+      lfo.stop(t + 3.2);
+      [220, 277.18, 329.63, 440, 554.37].forEach((f, i) => {
+        for (const detune of [-6, 6]) {
+          const o = ctx.createOscillator();
+          o.type = i < 2 ? 'sawtooth' : 'triangle';
+          o.frequency.value = f;
+          o.detune.value = detune;
+          lfoGain.connect(o.detune);
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(i < 2 ? 0.025 : 0.05, t + 0.35);
+          g.gain.setValueAtTime(i < 2 ? 0.025 : 0.05, t + 1.6);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 3);
+          o.connect(g).connect(lp);
+          o.start(t);
+          o.stop(t + 3.1);
+        }
+      });
+    },
+
     chop() {
       if (!ready()) return;
       const t = ctx.currentTime;

@@ -973,6 +973,7 @@ footer a { color: #8c859c; }
   pointer-events: none;
   background:
     linear-gradient(rgba(170, 0, 22, var(--red)), rgba(170, 0, 22, var(--red))),
+    linear-gradient(rgba(110, 60, 220, var(--violet, 0)), rgba(110, 60, 220, var(--violet, 0))),
     radial-gradient(ellipse 70% 80% at 50% 56%, transparent var(--r), rgba(0, 0, 0, var(--dark)) calc(var(--r) + 38%));
   mix-blend-mode: normal;
 }
@@ -1339,3 +1340,63 @@ table.ledger {
 .sound-toggle svg { width: 20px; height: 20px; }
 .sound-toggle[aria-pressed="true"] .cross { display: none; }
 .sound-toggle[aria-pressed="false"] .waves { display: none; }
+
+/* ------------------------------------------------------------------ Azoma easter eggs */
+
+/* logo carved into the chopping block */
+#blockLogo .carve { fill: rgba(22, 11, 4, 0.55); }
+#blockLogo .carve-hi { fill: rgba(255, 214, 160, 0.13); }
+#blockLogo .carve-glow { fill: #cdb9ff; opacity: 0; filter: drop-shadow(0 0 4px #9d7bff); }
+.execution.mothership-hit #blockLogo .carve-glow { animation: logoGlow 3s ease-out forwards; }
+@keyframes logoGlow {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  100% { opacity: 0.35; }
+}
+
+/* the mothership on the block */
+.condemned.mothership {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(157, 123, 255, 0.35), transparent 70%),
+    linear-gradient(160deg, #2a1745, #14082a 60%, #221334);
+  border: 1px solid rgba(205, 185, 255, 0.35);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6), 0 0 24px rgba(140, 90, 240, 0.35), inset 0 0 18px rgba(140, 90, 240, 0.35);
+  padding: 3% 8%;
+}
+.condemned.mothership img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.condemned.mothership.shielded { animation: shielded 2.4s ease-out forwards; }
+@keyframes shielded {
+  0% { transform: scale(1); box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+  6% { transform: scale(0.96, 1.04); box-shadow: 0 0 60px 20px rgba(205, 185, 255, 0.9), inset 0 0 30px rgba(255, 255, 255, 0.6); }
+  18% { transform: scale(1.03); }
+  30% { transform: scale(1); }
+  100% { transform: scale(1); box-shadow: 0 0 40px 8px rgba(140, 90, 240, 0.55), inset 0 0 18px rgba(140, 90, 240, 0.4); }
+}
+
+.holy-beam {
+  position: absolute;
+  z-index: 1;
+  bottom: auto;
+  top: -60%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(205, 185, 255, 0) 0%, rgba(205, 185, 255, 0.28) 55%, rgba(240, 232, 255, 0.55) 100%);
+  clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%);
+  filter: blur(6px);
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+
+.verdict .big.holy {
+  color: #e6dcff;
+  text-shadow: 0 0 24px rgba(157, 123, 255, 0.8), 0 4px 0 #000;
+  transform: none;
+}
+.verdict .big.holy.show .l {
+  animation: letterSlam 0.42s cubic-bezier(.2,1.4,.4,1) forwards, holyPulse 1.6s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * 45ms), calc(var(--i) * 45ms + 0.5s);
+}
+@keyframes holyPulse {
+  from { text-shadow: 0 0 18px rgba(157, 123, 255, 0.6), 0 4px 0 #000; }
+  to { text-shadow: 0 0 34px rgba(205, 185, 255, 1), 0 0 70px rgba(140, 90, 240, 0.6), 0 4px 0 #000; }
+}

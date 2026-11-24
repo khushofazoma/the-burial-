@@ -10,6 +10,13 @@ A spooky graveyard where Azoma staff nominate parts of the product to retire, an
 - **Laid to Rest**: features the admin marks as retired move to a memorial section.
 - **Admin dashboard** at `/admin`: password protected. Shows every proposal with vote counts and a bar chart, plus actions to lay to rest, resurrect, reset votes, or remove.
 
+## Easter eggs
+
+- Try nominating **Azoma** itself.
+- Look closely at the chopping block.
+
+Brand assets live in `public/brand/`.
+
 ## Anonymity
 
 - No names, emails or IPs are stored for nominations or votes.
