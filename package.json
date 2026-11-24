@@ -3,15 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "description": "Azoma's Funeral: anonymously nominate and vote on product features to retire.",
-  "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "wrangler dev",
+    "db:migrate:local": "wrangler d1 migrations apply funeral --local",
+    "db:migrate": "wrangler d1 migrations apply funeral --remote",
+    "deploy": "wrangler d1 migrations apply funeral --remote && wrangler deploy"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
-  "dependencies": {
-    "express": "^5.1.0"
+  "devDependencies": {
+    "wrangler": "^4.167.0"
   }
 }

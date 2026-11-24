@@ -89,6 +89,10 @@
     } catch {
       /* ignore */
     }
+    if (res.status === 401) {
+      location.href = '/login';
+      throw new Error('Signed out.');
+    }
     if (!res.ok) {
       const err = new Error((data && data.error) || 'Something went bump in the night.');
       err.data = data;
@@ -529,6 +533,13 @@
   });
 
   load();
+  api('/api/me')
+    .then((me) => {
+      $('#whoEmail').textContent = 'Signed in as ' + me.email;
+      $('#adminLink').hidden = !me.admin;
+      $('#whoami').hidden = false;
+    })
+    .catch(() => {});
   // live updates during the meeting
   setInterval(() => {
     if (!document.hidden) load();

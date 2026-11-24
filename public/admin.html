@@ -31,23 +31,15 @@
       <p class="subtitle">See the full ledger of the condemned. Remove proposals, or lay features to rest once they are retired.</p>
     </header>
 
-    <section class="admin-panel login-box" id="loginBox" hidden>
-      <form id="loginForm" class="field">
-        <label for="password">Speak the incantation</label>
-        <input id="password" type="password" autocomplete="current-password" placeholder="Admin password" required>
-        <p class="form-error" id="loginError" role="alert"></p>
-        <button class="btn btn-blood" type="submit" style="width:100%">Enter the crypt</button>
-      </form>
-    </section>
 
-    <section class="admin-panel" id="dash" hidden>
+    <section class="admin-panel" id="dash">
       <div class="stats" id="stats"></div>
       <div class="admin-head">
         <h2>The Ledger</h2>
         <div class="actions">
           <a class="btn btn-ghost btn-sm" href="/" style="text-decoration:none">View graveyard</a>
           <button class="btn btn-ghost btn-sm" id="refresh" type="button">Refresh</button>
-          <button class="btn btn-ghost btn-sm" id="logout" type="button">Leave crypt</button>
+          <a class="btn btn-ghost btn-sm" href="/auth/logout" style="text-decoration:none">Sign out</a>
         </div>
       </div>
       <div class="table-wrap">

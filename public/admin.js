@@ -2,7 +2,6 @@
   'use strict';
 
   const $ = (s) => document.querySelector(s);
-  const loginBox = $('#loginBox');
   const dash = $('#dash');
   const rows = $('#rows');
   const stats = $('#stats');
@@ -28,9 +27,13 @@
     } catch {
       /* ignore */
     }
-    if (res.status === 401 && !url.endsWith('/login')) {
-      showLogin();
-      throw new Error('Session expired.');
+    if (res.status === 401) {
+      location.href = '/login';
+      throw new Error('Signed out.');
+    }
+    if (res.status === 403) {
+      location.href = '/';
+      throw new Error('Not an admin.');
     }
     if (!res.ok) throw new Error((data && data.error) || 'Request failed.');
     return data;
@@ -51,17 +54,6 @@
   const fmt = (iso) =>
     iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 
-  function showLogin() {
-    dash.hidden = true;
-    loginBox.hidden = false;
-    $('#password').focus();
-  }
-
-  function showDash() {
-    loginBox.hidden = true;
-    dash.hidden = false;
-    load();
-  }
 
   function stat(label, value) {
     return h('div', { class: 'stat' }, [h('div', { class: 'label', text: label }), h('div', { class: 'value', text: String(value) })]);
@@ -167,33 +159,12 @@
     }
   }
 
-  $('#loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    $('#loginError').textContent = '';
-    try {
-      await api('/api/admin/login', {
-        method: 'POST',
-        body: JSON.stringify({ password: $('#password').value }),
-      });
-      $('#password').value = '';
-      showDash();
-    } catch (err) {
-      $('#loginError').textContent = err.message;
-    }
-  });
 
-  $('#logout').addEventListener('click', async () => {
-    await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
-    showLogin();
-  });
   $('#refresh').addEventListener('click', load);
 
   setInterval(() => {
     if (!dash.hidden && !document.hidden) load();
   }, 10000);
 
-  fetch('/api/admin/session', { credentials: 'same-origin' })
-    .then((r) => r.json())
-    .then((d) => (d.admin ? showDash() : showLogin()))
-    .catch(showLogin);
+  load();
 })();
