@@ -13,7 +13,7 @@ html_handling = "none"
 binding = "DB"
 database_name = "funeral"
 # Replace with the id printed by: npx wrangler d1 create funeral
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "c4ff898f-33a8-458c-b2ac-e657b26bab08"
 migrations_dir = "migrations"
 
 [vars]
