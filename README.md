@@ -1,6 +1,6 @@
 # The Funeral
 
-A spooky graveyard where Azoma and Ecomtent staff nominate parts of the product to retire, and vote on which ones should die. Built for the weekly and monthly "funeral" segment.
+A spooky graveyard where the team nominates parts of the product to retire, and vote on which ones should die. Built for the weekly and monthly "funeral" segment.
 
 ## What it does
 
@@ -8,8 +8,8 @@ A spooky graveyard where Azoma and Ecomtent staff nominate parts of the product 
 - **Sound**: effects are synthesised in the browser (no audio files). Toggle with the speaker button in the top-left corner; the choice is remembered.
 - **Vote**: click "Kill it" on any tombstone. A scythe sweeps across it and a soul escapes. Click again to spare it. Tombstones crack more as their votes pile up. Graves are ranked by votes; the top one gets candles and a "Next to die" badge. The page refreshes counts every 10 seconds, so it works live on a shared screen.
 - **Laid to Rest**: features the admin marks as retired move to a memorial section.
-- **Sign-in**: Google accounts on `@azoma.ai` and `@ecomtent.ai` only.
-- **Admin dashboard** at `/admin`: open to the emails listed in `ADMIN_EMAILS`, or to any signed-in user who enters `ADMIN_PASSWORD`. Shows every proposal with vote counts and a bar chart, plus actions to lay to rest, resurrect, reset votes, or remove.
+- **No sign-in needed** to view, nominate or vote. Anyone with the link can take part.
+- **Admin dashboard** at `/admin`: unlocked with `ADMIN_PASSWORD`, or by Google sign-in for the addresses in `ADMIN_EMAILS`. Shows every proposal with vote counts and a bar chart, plus actions to lay to rest, resurrect, reset votes, or remove.
 
 ## Easter eggs
 
@@ -20,11 +20,10 @@ Brand assets live in `public/brand/`.
 
 ## Anonymity
 
-- Nominations store no information about who made them.
-- A vote is stored as `HMAC(BALLOT_SECRET, email + ":" + proposal_id)`. That allows one vote per person per proposal, but the database alone can't reveal who voted, or connect one person's votes across proposals. Ballots are stored without timestamps or insertion order.
-- Admins see vote counts per proposal, plus a **Mourners' Register** of who has taken part (name, email, first and last day they voted or nominated). The register has no link to proposals or ballots, stores the day but never the time, and is listed alphabetically. Admins can clear it before each funeral.
-- One caveat: an admin watching the dashboard live while exactly one person votes could guess that person's vote from which count went up as their name appeared. With many people voting at once this stops working.
-- Limit: someone with full access to the Cloudflare account (the database **and** the `BALLOT_SECRET`) could hash a list of known emails and work out who voted for what. Keep that account to a small number of people.
+- No names, emails or IP addresses are stored for nominations or votes.
+- Each browser gets a random voter id in a cookie, which the server never stores. A vote is stored as `HMAC(BALLOT_SECRET, voter id + proposal id)`, so one vote per browser per proposal, with nothing that links a vote to a person or connects one browser's votes across proposals. Ballots have no timestamps or insertion order.
+- Admins see counts only.
+- Limit: it is one vote per browser, not per person. Someone could vote again from a private window or another device.
 
 ## Running it
 
@@ -39,7 +38,7 @@ npm run db:migrate:local
 npm run dev
 ```
 
-Open http://localhost:8787. Locally the sign-in page offers an email box instead of Google.
+Open http://localhost:8787. For the admin Google sign-in, the local login page offers an email box instead of Google.
 
 ## Project layout
 
@@ -47,7 +46,7 @@ Open http://localhost:8787. Locally the sign-in page offers an email box instead
 src/worker.js        Cloudflare Worker: Google sign-in, sessions, API, serves the pages
 migrations/          D1 database schema
 wrangler.toml        Cloudflare config (allowed domains, database binding)
-public/login.html    Sign-in page
+public/login.html    Admin Google sign-in page
 public/index.html    Graveyard page and execution stage
 public/style.css     All styling and keyframe animations
 public/execution.js  Axe / scythe execution sequence (camera, lighting, particle canvas, physics)

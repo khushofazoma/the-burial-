@@ -1,6 +1,6 @@
 # Deploying The Funeral
 
-The Funeral runs on **Cloudflare Workers** with a **Cloudflare D1** database. Both are free for this kind of use (100,000 requests and 100,000 database writes per day), need no credit card, and allow company use. Sign-in uses **Google**, restricted to `@azoma.ai` and `@ecomtent.ai`.
+The Funeral runs on **Cloudflare Workers** with a **Cloudflare D1** database. Both are free for this kind of use (100,000 requests and 100,000 database writes per day), need no credit card, and allow company use. The graveyard is public. The admin dashboard is unlocked with a password, or with Google sign-in for listed admin emails.
 
 Allow about 20 minutes the first time. Run every command from the project folder on your Mac.
 
@@ -84,7 +84,7 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET
 
 ## 6. Open it
 
-Visit your URL. You should see the sign-in page. Sign in with an `@azoma.ai` or `@ecomtent.ai` Google account. Personal Gmail accounts are turned away.
+Visit your URL. The graveyard opens straight away with no sign-in. Go to `/admin` and enter the admin password, or click **Sign in with Google** with an address from `ADMIN_EMAILS`.
 
 ## Updating later
 

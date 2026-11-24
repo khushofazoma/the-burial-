@@ -1,16 +1,18 @@
 // The Funeral: Cloudflare Worker backend.
 //
-// - Google sign-in, restricted to the domains in ALLOWED_DOMAINS.
-// - Stateless sessions in an HMAC-signed cookie.
-// - Proposals and ballots in Cloudflare D1.
-// - Static files in ./public are served through the ASSETS binding, behind the login.
+// - The graveyard is public: no sign-in needed to view, nominate or vote.
+// - The admin dashboard is unlocked by ADMIN_PASSWORD, or by Google sign-in for ADMIN_EMAILS.
+// - Admin sessions live in an HMAC-signed cookie.
+// - Proposals and ballots in Cloudflare D1. Static files in ./public via the ASSETS binding.
 //
-// Anonymity: a ballot is stored as HMAC(BALLOT_SECRET, email + ":" + proposalId).
-// One vote per person per proposal. Separately, a participation register records WHO
-// has voted (email + day only), with no link to which proposals they voted for.
+// Anonymity: each browser gets a random voter id in a cookie, never stored server-side.
+// A ballot is HMAC(BALLOT_SECRET, "v:" + voterId + ":" + proposalId), so one vote per
+// browser per proposal, and nothing links a vote to a person.
 
 const SESSION_COOKIE = 'funeral_session';
 const STATE_COOKIE = 'funeral_oauth';
+const VOTER_COOKIE = 'funeral_voter';
+const VOTER_TTL = 5 * 365 * 24 * 60 * 60;
 const SESSION_TTL = 7 * 24 * 60 * 60; // seconds
 const MAX_FEATURE = 80;
 const MAX_REASON = 280;
@@ -19,9 +21,6 @@ const MAX_REASON = 280;
 // Keep in sync with public/app.js.
 const MOTHERSHIP = /^\s*(?:the\s+)?(?:whole\s+(?:of\s+)?|entire\s+|all\s+of\s+)?(?:the\s+)?azoma(?:\.ai)?(?:\s+(?:itself|as\s+a\s+whole|the\s+company|company|platform|app|inc\.?|ltd\.?))?\s*[!.?]*\s*$/i;
 
-// Paths reachable without signing in (the login page and what it needs).
-const PUBLIC_PATHS = new Set(['/login', '/login.html', '/login.js', '/style.css', '/ambience.js', '/favicon.ico']);
-const PUBLIC_PREFIXES = ['/auth/', '/brand/'];
 
 const enc = new TextEncoder();
 
@@ -170,9 +169,11 @@ function emailAllowed(env, email) {
   return list(env.ALLOWED_DOMAINS).includes(domain.toLowerCase());
 }
 
-// Admin if listed in ADMIN_EMAILS, or if this session was unlocked with ADMIN_PASSWORD.
+// Admin if signed in with Google as one of ADMIN_EMAILS, or unlocked with ADMIN_PASSWORD.
 function isAdmin(env, session) {
-  return list(env.ADMIN_EMAILS).includes(session.email.toLowerCase()) || (session.admin === true && !!env.ADMIN_PASSWORD);
+  if (!session) return false;
+  if (session.email && list(env.ADMIN_EMAILS).includes(session.email.toLowerCase())) return true;
+  return session.admin === true && !!env.ADMIN_PASSWORD;
 }
 
 async function passwordMatches(env, attempt) {
@@ -186,27 +187,29 @@ async function passwordMatches(env, attempt) {
 
 // best-effort, per-isolate limit on password guesses
 const unlockLog = new Map();
-function unlockAllowed(email) {
+function unlockAllowed(key) {
   const now = Date.now();
-  const recent = (unlockLog.get(email) || []).filter((t) => now - t < 15 * 60 * 1000);
+  const recent = (unlockLog.get(key) || []).filter((t) => now - t < 15 * 60 * 1000);
   if (recent.length >= 8) return false;
   recent.push(now);
-  unlockLog.set(email, recent);
+  unlockLog.set(key, recent);
   return true;
 }
 
+// Admin session (Google-signed-in admin, or password-unlocked).
 async function getSession(request, env) {
   const token = parseCookies(request)[SESSION_COOKIE];
   const s = await unsign(env.SESSION_SECRET, token);
-  if (!s || !s.email) return null;
-  // re-check on every request so removing a domain takes effect immediately
-  if (!emailAllowed(env, s.email)) return null;
+  if (!s) return null;
+  if (s.email && !emailAllowed(env, s.email)) return null;
   return s;
 }
 
+const clientIp = (request) => request.headers.get('CF-Connecting-IP') || 'local';
+
 async function startSession(env, url, email, name, extra = {}) {
   const token = await sign(env.SESSION_SECRET, {
-    email: email.toLowerCase(),
+    email: (email || '').toLowerCase(),
     name: name || '',
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL,
     ...extra,
@@ -226,7 +229,8 @@ async function handleAuth(request, env, url) {
     if (!(env.DEV_LOGIN === 'true' && isLocal(url))) return new Response('Not found', { status: 404 });
     const email = (url.searchParams.get('email') || '').trim();
     if (!emailAllowed(env, email)) return redirect('/login?dev=1&error=domain');
-    return redirect('/', { 'Set-Cookie': await startSession(env, url, email, 'Dev user') });
+    if (!list(env.ADMIN_EMAILS).includes(email.toLowerCase())) return redirect('/login?dev=1&error=notadmin');
+    return redirect('/admin', { 'Set-Cookie': await startSession(env, url, email, 'Dev user') });
   }
 
   if (url.pathname === '/auth/login') {
@@ -290,11 +294,14 @@ async function handleAuth(request, env, url) {
     if (env.REQUIRE_WORKSPACE === 'true' && (claims.hd || '').toLowerCase() !== email.split('@')[1]) {
       return redirect('/login?error=domain', { 'Set-Cookie': clearState });
     }
-    return redirect('/', { 'Set-Cookie': [clearState, await startSession(env, url, email, claims.name)] });
+    if (!list(env.ADMIN_EMAILS).includes(email)) {
+      return redirect('/login?error=notadmin', { 'Set-Cookie': clearState });
+    }
+    return redirect('/admin', { 'Set-Cookie': [clearState, await startSession(env, url, email, claims.name)] });
   }
 
   if (url.pathname === '/auth/logout') {
-    return redirect('/login', { 'Set-Cookie': cookie(SESSION_COOKIE, '', { maxAge: 0, secure }) });
+    return redirect('/', { 'Set-Cookie': cookie(SESSION_COOKIE, '', { maxAge: 0, secure }) });
   }
 
   return new Response('Not found', { status: 404 });
@@ -302,8 +309,16 @@ async function handleAuth(request, env, url) {
 
 // ---------------------------------------------------------------- data
 
-async function ballotHash(env, email, proposalId) {
-  return hmacHex(env.BALLOT_SECRET, email.toLowerCase() + ':' + proposalId);
+async function ballotHash(env, voterId, proposalId) {
+  return hmacHex(env.BALLOT_SECRET, 'v:' + voterId + ':' + proposalId);
+}
+
+// Anonymous per-browser voter id. Returns [id, Set-Cookie header or null].
+function voterIdentity(request, url) {
+  const existing = parseCookies(request)[VOTER_COOKIE];
+  if (existing && /^[A-Za-z0-9_-]{32}$/.test(existing)) return [existing, null];
+  const id = randomToken(24);
+  return [id, cookie(VOTER_COOKIE, id, { maxAge: VOTER_TTL, secure: url.protocol === 'https:' })];
 }
 
 function toView(row, voted) {
@@ -328,11 +343,11 @@ async function allProposals(env) {
   return results;
 }
 
-// Which of these proposals has this person voted for?
-async function votedSet(env, email, rows) {
+// Which of these proposals has this browser voted for?
+async function votedSet(env, voterId, rows) {
   const voted = new Set();
   if (!rows.length) return voted;
-  const pairs = await Promise.all(rows.map(async (r) => [r.id, await ballotHash(env, email, r.id)]));
+  const pairs = await Promise.all(rows.map(async (r) => [r.id, await ballotHash(env, voterId, r.id)]));
   const byHash = new Map(pairs.map(([id, h]) => [h, id]));
   const hashes = [...byHash.keys()];
   for (let i = 0; i < hashes.length; i += 90) {
@@ -347,15 +362,6 @@ async function votedSet(env, email, rows) {
   return voted;
 }
 
-// Record that this person took part. Day only, never the time.
-function registerParticipant(env, session) {
-  const today = new Date().toISOString().slice(0, 10);
-  return env.DB.prepare(
-    `INSERT INTO participants (email, name, first_voted, last_voted) VALUES (?, ?, ?, ?)
-     ON CONFLICT (email) DO UPDATE SET last_voted = excluded.last_voted, name = excluded.name`
-  ).bind(session.email, session.name || '', today, today);
-}
-
 const byVotes = (a, b) => b.votes - a.votes || a.createdAt.localeCompare(b.createdAt);
 
 async function readBody(request) {
@@ -368,27 +374,27 @@ async function readBody(request) {
 
 // best-effort, per-isolate throttle for nominations
 const nominationLog = new Map();
-function nominationAllowed(email) {
+function nominationAllowed(key) {
   const now = Date.now();
-  const recent = (nominationLog.get(email) || []).filter((t) => now - t < 60 * 60 * 1000);
+  const recent = (nominationLog.get(key) || []).filter((t) => now - t < 60 * 60 * 1000);
   if (recent.length >= 15) return false;
   recent.push(now);
-  nominationLog.set(email, recent);
+  nominationLog.set(key, recent);
   return true;
 }
 
-async function handleApi(request, env, url, session) {
+async function handleApi(request, env, url, session, voterId) {
   const { pathname } = url;
   const method = request.method;
   const admin = isAdmin(env, session);
 
   if (pathname === '/api/me' && method === 'GET') {
-    return json({ email: session.email, name: session.name, admin });
+    return json({ admin, email: (session && session.email) || null });
   }
 
   if (pathname === '/api/proposals' && method === 'GET') {
     const rows = await allProposals(env);
-    const voted = await votedSet(env, session.email, rows);
+    const voted = await votedSet(env, voterId, rows);
     const all = rows.map((r) => toView(r, voted.has(r.id)));
     return json({
       open: all.filter((p) => p.status === 'open').sort(byVotes),
@@ -406,7 +412,7 @@ async function handleApi(request, env, url, session) {
     if (MOTHERSHIP.test(feature)) {
       return json({ error: 'The mothership cannot be killed.', mothership: true }, 422);
     }
-    if (!nominationAllowed(session.email)) {
+    if (!nominationAllowed('v:' + voterId) || !nominationAllowed('ip:' + clientIp(request))) {
       return json({ error: 'Easy, reaper. Too many nominations this hour.' }, 429);
     }
     const dupe = await env.DB.prepare(
@@ -425,9 +431,8 @@ async function handleApi(request, env, url, session) {
       ).bind(id, feature, reason, createdAt),
       env.DB.prepare(`INSERT INTO ballots (proposal_id, ballot) VALUES (?, ?)`).bind(
         id,
-        await ballotHash(env, session.email, id)
+        await ballotHash(env, voterId, id)
       ),
-      registerParticipant(env, session),
     ]);
     return json(
       toView({ id, feature, reason, status: 'open', created_at: createdAt, votes: 1 }, true),
@@ -441,14 +446,11 @@ async function handleApi(request, env, url, session) {
     const p = await env.DB.prepare(`SELECT status FROM proposals WHERE id = ?`).bind(id).first();
     if (!p) return json({ error: 'No such grave.' }, 404);
     if (p.status !== 'open') return json({ error: 'It is already buried.' }, 400);
-    const hash = await ballotHash(env, session.email, id);
+    const hash = await ballotHash(env, voterId, id);
     const del = await env.DB.prepare(`DELETE FROM ballots WHERE proposal_id = ? AND ballot = ?`).bind(id, hash).run();
     let voted = false;
     if (!del.meta.changes) {
-      await env.DB.batch([
-        env.DB.prepare(`INSERT OR IGNORE INTO ballots (proposal_id, ballot) VALUES (?, ?)`).bind(id, hash),
-        registerParticipant(env, session),
-      ]);
+      await env.DB.prepare(`INSERT OR IGNORE INTO ballots (proposal_id, ballot) VALUES (?, ?)`).bind(id, hash).run();
       voted = true;
     }
     const row = await env.DB.prepare(
@@ -463,11 +465,11 @@ async function handleApi(request, env, url, session) {
   // ---- admin
   if (pathname === '/api/admin/unlock' && method === 'POST') {
     if (!env.ADMIN_PASSWORD) return json({ error: 'No admin password is set.' }, 400);
-    if (!unlockAllowed(session.email)) return json({ error: 'Too many attempts. Try again in 15 minutes.' }, 429);
+    if (!unlockAllowed(clientIp(request))) return json({ error: 'Too many attempts. Try again in 15 minutes.' }, 429);
     const { password } = await readBody(request);
     if (!(await passwordMatches(env, password))) return json({ error: 'Wrong incantation.' }, 400);
     return json({ ok: true }, 200, {
-      'Set-Cookie': await startSession(env, url, session.email, session.name, { admin: true }),
+      'Set-Cookie': await startSession(env, url, session && session.email, session && session.name, { admin: true }),
     });
   }
 
@@ -482,7 +484,6 @@ async function handleApi(request, env, url, session) {
       });
       const open = all.filter((p) => p.status === 'open').sort(byVotes);
       const buried = all.filter((p) => p.status !== 'open').sort(byVotes);
-      const voters = await env.DB.prepare(`SELECT COUNT(*) AS n FROM participants`).first();
       return json({
         proposals: [...open, ...buried],
         stats: {
@@ -490,28 +491,8 @@ async function handleApi(request, env, url, session) {
           open: open.length,
           buried: buried.length,
           votes: all.reduce((n, p) => n + p.votes, 0),
-          voters: voters ? voters.n : 0,
         },
       });
-    }
-
-    // The register: who has taken part. Alphabetical, so it shows no order of voting.
-    if (pathname === '/api/admin/participants' && method === 'GET') {
-      const { results } = await env.DB.prepare(
-        `SELECT email, name, first_voted, last_voted FROM participants ORDER BY email`
-      ).all();
-      return json({
-        participants: results.map((r) => ({
-          email: r.email,
-          name: r.name,
-          firstVoted: r.first_voted,
-          lastVoted: r.last_voted,
-        })),
-      });
-    }
-    if (pathname === '/api/admin/participants' && method === 'DELETE') {
-      await env.DB.prepare(`DELETE FROM participants`).run();
-      return json({ ok: true });
     }
 
     m = pathname.match(/^\/api\/admin\/proposals\/([0-9a-f-]{36})(\/status|\/reset-votes)?$/);
@@ -547,10 +528,6 @@ async function handleApi(request, env, url, session) {
 
 // ---------------------------------------------------------------- entry
 
-function isPublic(pathname) {
-  return PUBLIC_PATHS.has(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
-}
-
 async function serveAsset(request, env, path) {
   const url = new URL(request.url);
   if (path) url.pathname = path;
@@ -571,32 +548,33 @@ export default {
     }
 
     if (pathname.startsWith('/auth/')) return handleAuth(request, env, url);
-    if (pathname === '/login' || pathname === '/login.html') {
-      if (await getSession(request, env)) return redirect('/');
-      return serveAsset(request, env, '/login.html');
-    }
-    if (isPublic(pathname)) return serveAsset(request, env);
 
     const session = await getSession(request, env);
 
+    // /login is now only the admins' Google sign-in page
+    if (pathname === '/login' || pathname === '/login.html') {
+      if (isAdmin(env, session)) return redirect('/admin');
+      return serveAsset(request, env, '/login.html');
+    }
+
     if (pathname.startsWith('/api/')) {
-      if (!session) return json({ error: 'Sign in first.' }, 401);
       // reject cross-site writes
       if (request.method !== 'GET') {
         const origin = request.headers.get('Origin');
         if (origin && origin !== url.origin) return json({ error: 'Bad origin.' }, 403);
       }
+      const [voterId, voterCookie] = voterIdentity(request, url);
       try {
-        return await handleApi(request, env, url, session);
+        const res = await handleApi(request, env, url, session, voterId);
+        if (voterCookie) res.headers.append('Set-Cookie', voterCookie);
+        return res;
       } catch (err) {
         console.error(err);
         return json({ error: 'Something went bump in the night.' }, 500);
       }
     }
 
-    if (!session) return redirect('/login');
-
-    // Non-admins get the page too, but it only shows the password prompt; all data is behind the API check.
+    // The admin page loads for anyone but shows only the unlock prompt; all data is behind the API check.
     if (pathname === '/admin' || pathname === '/admin.html') return serveAsset(request, env, '/admin.html');
     return serveAsset(request, env);
   },

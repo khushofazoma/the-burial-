@@ -27,11 +27,7 @@
     } catch {
       /* ignore */
     }
-    if (res.status === 401) {
-      location.href = '/login';
-      throw new Error('Signed out.');
-    }
-    if (res.status === 403) {
+    if (res.status === 401 || res.status === 403) {
       showLock();
       throw new Error('Not an admin.');
     }
@@ -59,47 +55,7 @@
     return h('div', { class: 'stat' }, [h('div', { class: 'label', text: label }), h('div', { class: 'value', text: String(value) })]);
   }
 
-  const fmtDay = (d) =>
-    d ? new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '';
-
-  async function loadRegister() {
-    let data;
-    try {
-      data = await api('/api/admin/participants');
-    } catch (e) {
-      return;
-    }
-    const body = $('#registerRows');
-    body.replaceChildren();
-    if (!data.participants.length) {
-      body.appendChild(h('tr', {}, [h('td', { colspan: '4', class: 'empty', text: 'Nobody has voted yet.' })]));
-      return;
-    }
-    for (const p of data.participants) {
-      body.appendChild(
-        h('tr', {}, [
-          h('td', {}, [h('div', { class: 'feat', text: p.name || '—' })]),
-          h('td', { text: p.email }),
-          h('td', { text: fmtDay(p.firstVoted) }),
-          h('td', { text: fmtDay(p.lastVoted) }),
-        ])
-      );
-    }
-  }
-
-  $('#clearRegister').addEventListener('click', async () => {
-    if (!confirm('Clear the register of who has voted? Votes themselves are not affected.')) return;
-    try {
-      await api('/api/admin/participants', { method: 'DELETE' });
-      toast('Register cleared.');
-      load();
-    } catch (e) {
-      toast(e.message);
-    }
-  });
-
   async function load() {
-    loadRegister();
     let data;
     try {
       data = await api('/api/admin/proposals');
@@ -111,7 +67,6 @@
       stat('On death row', s.open),
       stat('Laid to rest', s.buried),
       stat('Votes cast', s.votes),
-      stat('Mourners', s.voters),
       stat('Total nominations', s.total)
     );
 
@@ -210,7 +165,6 @@
   // ---- password unlock for signed-in users who are not on the admin email list
   function showLock() {
     dash.hidden = true;
-    $('#registerPanel').hidden = true;
     $('#lockBox').hidden = false;
     $('#adminPassword').focus();
   }
@@ -218,7 +172,6 @@
   function showDash() {
     $('#lockBox').hidden = true;
     dash.hidden = false;
-    $('#registerPanel').hidden = false;
     load();
   }
 

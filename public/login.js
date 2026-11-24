@@ -4,6 +4,7 @@
   const params = new URLSearchParams(location.search);
   const messages = {
     domain: 'That account is not from Azoma or Ecomtent. Sign in with your work Google account.',
+    notadmin: 'That account is not on the admin list. Use the admin password on the Undertaker\'s Office page instead.',
     cancelled: 'Sign-in was cancelled.',
     state: 'Your sign-in expired. Please try again.',
     google: 'Google sign-in failed. Please try again.',

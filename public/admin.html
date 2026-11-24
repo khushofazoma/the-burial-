@@ -39,7 +39,8 @@
         <p class="form-error" id="unlockError" role="alert"></p>
         <button class="btn btn-blood" type="submit" style="width:100%">Enter the crypt</button>
       </form>
-      <p style="text-align:center;margin:14px 0 0"><a href="/" style="color:var(--muted)">Back to the graveyard</a></p>
+      <p style="text-align:center;margin:16px 0 0;color:var(--muted)">Admin with a Google account? <a href="/auth/login" style="color:var(--bone)">Sign in with Google</a></p>
+      <p style="text-align:center;margin:10px 0 0"><a href="/" style="color:var(--muted)">Back to the graveyard</a></p>
     </section>
 
     <section class="admin-panel" id="dash" hidden>
@@ -67,31 +68,9 @@
           <tbody id="rows"></tbody>
         </table>
       </div>
-      <p class="hint" style="color:var(--muted);font-style:italic;margin-top:16px">Votes are anonymous. The ledger shows counts only, never who voted for what or who nominated.</p>
+      <p class="hint" style="color:var(--muted);font-style:italic;margin-top:16px">Votes are anonymous. The ledger shows counts only, never who voted or who nominated.</p>
     </section>
 
-    <section class="admin-panel" id="registerPanel" hidden>
-      <div class="admin-head">
-        <h2>The Mourners' Register</h2>
-        <div class="actions">
-          <button class="btn btn-danger btn-sm" id="clearRegister" type="button">Clear register</button>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table class="ledger register">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th style="width:150px">First voted</th>
-              <th style="width:150px">Last voted</th>
-            </tr>
-          </thead>
-          <tbody id="registerRows"></tbody>
-        </table>
-      </div>
-      <p class="hint" style="color:var(--muted);font-style:italic;margin-top:16px">Everyone who has voted or nominated, in alphabetical order. It records who took part and on which day, never what they voted for. Clear it before each new funeral to start a fresh register.</p>
-    </section>
   </main>
 
   <div class="toast" id="toast" role="status"></div>
