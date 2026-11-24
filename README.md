@@ -9,7 +9,7 @@ A spooky graveyard where Azoma and Ecomtent staff nominate parts of the product 
 - **Vote**: click "Kill it" on any tombstone. A scythe sweeps across it and a soul escapes. Click again to spare it. Tombstones crack more as their votes pile up. Graves are ranked by votes; the top one gets candles and a "Next to die" badge. The page refreshes counts every 10 seconds, so it works live on a shared screen.
 - **Laid to Rest**: features the admin marks as retired move to a memorial section.
 - **Sign-in**: Google accounts on `@azoma.ai` and `@ecomtent.ai` only.
-- **Admin dashboard** at `/admin`: only for the emails listed in `ADMIN_EMAILS`. Shows every proposal with vote counts and a bar chart, plus actions to lay to rest, resurrect, reset votes, or remove.
+- **Admin dashboard** at `/admin`: open to the emails listed in `ADMIN_EMAILS`, or to any signed-in user who enters `ADMIN_PASSWORD`. Shows every proposal with vote counts and a bar chart, plus actions to lay to rest, resurrect, reset votes, or remove.
 
 ## Easter eggs
 

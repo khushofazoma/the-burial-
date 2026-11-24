@@ -8,7 +8,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚰️</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=IM+Fell+English:ital@0;1&family=Spectral+SC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -32,7 +32,17 @@
     </header>
 
 
-    <section class="admin-panel" id="dash">
+    <section class="admin-panel login-box" id="lockBox" hidden>
+      <form id="unlockForm" class="field">
+        <label for="adminPassword">Speak the incantation</label>
+        <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Admin password" required>
+        <p class="form-error" id="unlockError" role="alert"></p>
+        <button class="btn btn-blood" type="submit" style="width:100%">Enter the crypt</button>
+      </form>
+      <p style="text-align:center;margin:14px 0 0"><a href="/" style="color:var(--muted)">Back to the graveyard</a></p>
+    </section>
+
+    <section class="admin-panel" id="dash" hidden>
       <div class="stats" id="stats"></div>
       <div class="admin-head">
         <h2>The Ledger</h2>
@@ -60,7 +70,7 @@
       <p class="hint" style="color:var(--muted);font-style:italic;margin-top:16px">Votes are anonymous. The ledger shows counts only, never who voted for what or who nominated.</p>
     </section>
 
-    <section class="admin-panel" id="registerPanel">
+    <section class="admin-panel" id="registerPanel" hidden>
       <div class="admin-head">
         <h2>The Mourners' Register</h2>
         <div class="actions">

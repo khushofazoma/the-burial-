@@ -170,8 +170,29 @@ function emailAllowed(env, email) {
   return list(env.ALLOWED_DOMAINS).includes(domain.toLowerCase());
 }
 
-function isAdmin(env, email) {
-  return list(env.ADMIN_EMAILS).includes(email.toLowerCase());
+// Admin if listed in ADMIN_EMAILS, or if this session was unlocked with ADMIN_PASSWORD.
+function isAdmin(env, session) {
+  return list(env.ADMIN_EMAILS).includes(session.email.toLowerCase()) || (session.admin === true && !!env.ADMIN_PASSWORD);
+}
+
+async function passwordMatches(env, attempt) {
+  if (!env.ADMIN_PASSWORD || typeof attempt !== 'string') return false;
+  // compare HMACs so the check takes the same time whatever the input
+  const [a, b] = await Promise.all([hmacHex(env.SESSION_SECRET, attempt), hmacHex(env.SESSION_SECRET, env.ADMIN_PASSWORD)]);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+// best-effort, per-isolate limit on password guesses
+const unlockLog = new Map();
+function unlockAllowed(email) {
+  const now = Date.now();
+  const recent = (unlockLog.get(email) || []).filter((t) => now - t < 15 * 60 * 1000);
+  if (recent.length >= 8) return false;
+  recent.push(now);
+  unlockLog.set(email, recent);
+  return true;
 }
 
 async function getSession(request, env) {
@@ -183,11 +204,12 @@ async function getSession(request, env) {
   return s;
 }
 
-async function startSession(env, url, email, name) {
+async function startSession(env, url, email, name, extra = {}) {
   const token = await sign(env.SESSION_SECRET, {
     email: email.toLowerCase(),
     name: name || '',
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL,
+    ...extra,
   });
   return cookie(SESSION_COOKIE, token, { maxAge: SESSION_TTL, secure: url.protocol === 'https:' });
 }
@@ -358,7 +380,7 @@ function nominationAllowed(email) {
 async function handleApi(request, env, url, session) {
   const { pathname } = url;
   const method = request.method;
-  const admin = isAdmin(env, session.email);
+  const admin = isAdmin(env, session);
 
   if (pathname === '/api/me' && method === 'GET') {
     return json({ email: session.email, name: session.name, admin });
@@ -439,6 +461,16 @@ async function handleApi(request, env, url, session) {
   }
 
   // ---- admin
+  if (pathname === '/api/admin/unlock' && method === 'POST') {
+    if (!env.ADMIN_PASSWORD) return json({ error: 'No admin password is set.' }, 400);
+    if (!unlockAllowed(session.email)) return json({ error: 'Too many attempts. Try again in 15 minutes.' }, 429);
+    const { password } = await readBody(request);
+    if (!(await passwordMatches(env, password))) return json({ error: 'Wrong incantation.' }, 400);
+    return json({ ok: true }, 200, {
+      'Set-Cookie': await startSession(env, url, session.email, session.name, { admin: true }),
+    });
+  }
+
   if (pathname.startsWith('/api/admin/')) {
     if (!admin) return json({ error: 'Only the undertaker may enter.' }, 403);
 
@@ -564,10 +596,8 @@ export default {
 
     if (!session) return redirect('/login');
 
-    if (pathname === '/admin' || pathname === '/admin.html') {
-      if (!isAdmin(env, session.email)) return redirect('/');
-      return serveAsset(request, env, '/admin.html');
-    }
+    // Non-admins get the page too, but it only shows the password prompt; all data is behind the API check.
+    if (pathname === '/admin' || pathname === '/admin.html') return serveAsset(request, env, '/admin.html');
     return serveAsset(request, env);
   },
 };

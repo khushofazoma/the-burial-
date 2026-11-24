@@ -28,3 +28,4 @@ REQUIRE_WORKSPACE = "false"
 #   SESSION_SECRET        random string, signs login cookies
 #   BALLOT_SECRET         random string, keys the anonymous vote hashes (never change it)
 #   ADMIN_EMAILS          comma separated emails allowed into /admin
+#   ADMIN_PASSWORD        password that unlocks /admin for any signed-in user (optional)

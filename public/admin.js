@@ -32,7 +32,7 @@
       throw new Error('Signed out.');
     }
     if (res.status === 403) {
-      location.href = '/';
+      showLock();
       throw new Error('Not an admin.');
     }
     if (!res.ok) throw new Error((data && data.error) || 'Request failed.');
@@ -207,5 +207,37 @@
     if (!dash.hidden && !document.hidden) load();
   }, 10000);
 
-  load();
+  // ---- password unlock for signed-in users who are not on the admin email list
+  function showLock() {
+    dash.hidden = true;
+    $('#registerPanel').hidden = true;
+    $('#lockBox').hidden = false;
+    $('#adminPassword').focus();
+  }
+
+  function showDash() {
+    $('#lockBox').hidden = true;
+    dash.hidden = false;
+    $('#registerPanel').hidden = false;
+    load();
+  }
+
+  $('#unlockForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('#unlockError').textContent = '';
+    try {
+      await api('/api/admin/unlock', {
+        method: 'POST',
+        body: JSON.stringify({ password: $('#adminPassword').value }),
+      });
+      $('#adminPassword').value = '';
+      showDash();
+    } catch (err) {
+      $('#unlockError').textContent = err.message;
+    }
+  });
+
+  api('/api/me')
+    .then((me) => (me.admin ? showDash() : showLock()))
+    .catch(() => {});
 })();

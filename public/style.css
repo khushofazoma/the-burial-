@@ -17,8 +17,8 @@
   --panel: rgba(16, 12, 24, 0.82);
   --panel-border: rgba(233, 226, 207, 0.14);
   --font-title: 'Creepster', 'Chiller', fantasy;
-  --font-body: 'IM Fell English', Georgia, serif;
-  --font-ui: 'Spectral SC', Georgia, serif;
+  --font-body: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-ui: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }

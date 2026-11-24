@@ -56,6 +56,12 @@ npx wrangler secret put ADMIN_EMAILS
 - `BALLOT_SECRET` keys the anonymous vote hashes. **Never change it.** If you do, existing votes can no longer be matched to their voters, so people could vote twice.
 - `ADMIN_EMAILS` is who can open `/admin`. Update it the same way at any time.
 
+Optionally, set a password that unlocks `/admin` for any signed-in user. Use single quotes so characters like `!` are kept:
+
+```bash
+echo 'your-password' | npx wrangler secret put ADMIN_PASSWORD
+```
+
 ## 5. Create the Google sign-in client
 
 1. Go to https://console.cloud.google.com and create a project called **The Funeral**.

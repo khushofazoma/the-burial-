@@ -536,7 +536,7 @@
   api('/api/me')
     .then((me) => {
       $('#whoEmail').textContent = 'Signed in as ' + me.email;
-      $('#adminLink').hidden = !me.admin;
+      $('#adminLink').hidden = false;
       $('#whoami').hidden = false;
     })
     .catch(() => {});
