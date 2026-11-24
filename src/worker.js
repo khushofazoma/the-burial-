@@ -6,7 +6,8 @@
 // - Static files in ./public are served through the ASSETS binding, behind the login.
 //
 // Anonymity: a ballot is stored as HMAC(BALLOT_SECRET, email + ":" + proposalId).
-// Emails are never written to the database. One vote per person per proposal.
+// One vote per person per proposal. Separately, a participation register records WHO
+// has voted (email + day only), with no link to which proposals they voted for.
 
 const SESSION_COOKIE = 'funeral_session';
 const STATE_COOKIE = 'funeral_oauth';
@@ -324,6 +325,15 @@ async function votedSet(env, email, rows) {
   return voted;
 }
 
+// Record that this person took part. Day only, never the time.
+function registerParticipant(env, session) {
+  const today = new Date().toISOString().slice(0, 10);
+  return env.DB.prepare(
+    `INSERT INTO participants (email, name, first_voted, last_voted) VALUES (?, ?, ?, ?)
+     ON CONFLICT (email) DO UPDATE SET last_voted = excluded.last_voted, name = excluded.name`
+  ).bind(session.email, session.name || '', today, today);
+}
+
 const byVotes = (a, b) => b.votes - a.votes || a.createdAt.localeCompare(b.createdAt);
 
 async function readBody(request) {
@@ -395,6 +405,7 @@ async function handleApi(request, env, url, session) {
         id,
         await ballotHash(env, session.email, id)
       ),
+      registerParticipant(env, session),
     ]);
     return json(
       toView({ id, feature, reason, status: 'open', created_at: createdAt, votes: 1 }, true),
@@ -412,7 +423,10 @@ async function handleApi(request, env, url, session) {
     const del = await env.DB.prepare(`DELETE FROM ballots WHERE proposal_id = ? AND ballot = ?`).bind(id, hash).run();
     let voted = false;
     if (!del.meta.changes) {
-      await env.DB.prepare(`INSERT OR IGNORE INTO ballots (proposal_id, ballot) VALUES (?, ?)`).bind(id, hash).run();
+      await env.DB.batch([
+        env.DB.prepare(`INSERT OR IGNORE INTO ballots (proposal_id, ballot) VALUES (?, ?)`).bind(id, hash),
+        registerParticipant(env, session),
+      ]);
       voted = true;
     }
     const row = await env.DB.prepare(
@@ -436,6 +450,7 @@ async function handleApi(request, env, url, session) {
       });
       const open = all.filter((p) => p.status === 'open').sort(byVotes);
       const buried = all.filter((p) => p.status !== 'open').sort(byVotes);
+      const voters = await env.DB.prepare(`SELECT COUNT(*) AS n FROM participants`).first();
       return json({
         proposals: [...open, ...buried],
         stats: {
@@ -443,8 +458,28 @@ async function handleApi(request, env, url, session) {
           open: open.length,
           buried: buried.length,
           votes: all.reduce((n, p) => n + p.votes, 0),
+          voters: voters ? voters.n : 0,
         },
       });
+    }
+
+    // The register: who has taken part. Alphabetical, so it shows no order of voting.
+    if (pathname === '/api/admin/participants' && method === 'GET') {
+      const { results } = await env.DB.prepare(
+        `SELECT email, name, first_voted, last_voted FROM participants ORDER BY email`
+      ).all();
+      return json({
+        participants: results.map((r) => ({
+          email: r.email,
+          name: r.name,
+          firstVoted: r.first_voted,
+          lastVoted: r.last_voted,
+        })),
+      });
+    }
+    if (pathname === '/api/admin/participants' && method === 'DELETE') {
+      await env.DB.prepare(`DELETE FROM participants`).run();
+      return json({ ok: true });
     }
 
     m = pathname.match(/^\/api\/admin\/proposals\/([0-9a-f-]{36})(\/status|\/reset-votes)?$/);

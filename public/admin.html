@@ -57,7 +57,30 @@
           <tbody id="rows"></tbody>
         </table>
       </div>
-      <p class="hint" style="color:var(--muted);font-style:italic;margin-top:16px">Votes are anonymous. This office sees counts only, never who voted or who nominated.</p>
+      <p class="hint" style="color:var(--muted);font-style:italic;margin-top:16px">Votes are anonymous. The ledger shows counts only, never who voted for what or who nominated.</p>
+    </section>
+
+    <section class="admin-panel" id="registerPanel">
+      <div class="admin-head">
+        <h2>The Mourners' Register</h2>
+        <div class="actions">
+          <button class="btn btn-danger btn-sm" id="clearRegister" type="button">Clear register</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="ledger register">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th style="width:150px">First voted</th>
+              <th style="width:150px">Last voted</th>
+            </tr>
+          </thead>
+          <tbody id="registerRows"></tbody>
+        </table>
+      </div>
+      <p class="hint" style="color:var(--muted);font-style:italic;margin-top:16px">Everyone who has voted or nominated, in alphabetical order. It records who took part and on which day, never what they voted for. Clear it before each new funeral to start a fresh register.</p>
     </section>
   </main>
 

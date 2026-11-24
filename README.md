@@ -20,10 +20,10 @@ Brand assets live in `public/brand/`.
 
 ## Anonymity
 
-- Signing in only proves someone works here. Emails are never written to the database.
 - Nominations store no information about who made them.
 - A vote is stored as `HMAC(BALLOT_SECRET, email + ":" + proposal_id)`. That allows one vote per person per proposal, but the database alone can't reveal who voted, or connect one person's votes across proposals. Ballots are stored without timestamps or insertion order.
-- Admins see counts only.
+- Admins see vote counts per proposal, plus a **Mourners' Register** of who has taken part (name, email, first and last day they voted or nominated). The register has no link to proposals or ballots, stores the day but never the time, and is listed alphabetically. Admins can clear it before each funeral.
+- One caveat: an admin watching the dashboard live while exactly one person votes could guess that person's vote from which count went up as their name appeared. With many people voting at once this stops working.
 - Limit: someone with full access to the Cloudflare account (the database **and** the `BALLOT_SECRET`) could hash a list of known emails and work out who voted for what. Keep that account to a small number of people.
 
 ## Running it
