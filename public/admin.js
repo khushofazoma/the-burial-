@@ -27,7 +27,11 @@
     } catch {
       /* ignore */
     }
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401) {
+      location.href = '/gate?next=/admin';
+      throw new Error('Password needed.');
+    }
+    if (res.status === 403) {
       showLock();
       throw new Error('Not an admin.');
     }
@@ -84,6 +88,15 @@
       if (isOpen) rank++;
       const bar = h('div', { class: 'bar' }, [h('span', { style: `width:${(p.votes / max) * 100}%` })]);
       const actions = h('div', { class: 'actions' }, [
+        isOpen
+          ? h('button', {
+              class: 'btn btn-sm ' + (p.chosen ? 'btn-blood' : 'btn-ghost'),
+              type: 'button',
+              text: p.chosen ? '☠ Next to die ✓' : '☠ Mark next to die',
+              title: p.chosen ? 'Click to remove the mark' : 'Show this grave as next to die',
+              onclick: () => setChosen(p, !p.chosen),
+            })
+          : null,
         h('button', {
           class: 'btn btn-ghost btn-sm',
           type: 'button',
@@ -112,11 +125,29 @@
             p.reason ? h('div', { class: 'why', text: p.reason }) : null,
           ]),
           h('td', {}, [h('div', { class: 'num', style: 'font-family:var(--font-ui);font-weight:700;font-size:1.2rem;color:var(--bone)', text: String(p.votes) }), bar]),
-          h('td', {}, [h('span', { class: `status-pill ${p.status}`, text: isOpen ? 'Death row' : 'Buried' })]),
+          h('td', {}, [
+            h('span', {
+              class: `status-pill ${p.chosen ? 'chosen' : p.status}`,
+              text: p.chosen ? 'Next to die' : isOpen ? 'Death row' : 'Buried',
+            }),
+          ]),
           h('td', { text: fmt(p.createdAt) }),
           h('td', {}, [actions]),
         ])
       );
+    }
+  }
+
+  async function setChosen(p, chosen) {
+    try {
+      await api(`/api/admin/proposals/${encodeURIComponent(p.id)}/chosen`, {
+        method: 'POST',
+        body: JSON.stringify({ chosen }),
+      });
+      toast(chosen ? `“${p.feature}” is next to die.` : `“${p.feature}” is spared, for now.`);
+      load();
+    } catch (e) {
+      toast(e.message);
     }
   }
 

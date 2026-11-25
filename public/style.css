@@ -1487,3 +1487,15 @@ table.ledger {
   flex-wrap: wrap;
   justify-content: center;
 }
+
+/* vote-rank badges are informational; only the admin's pick gets the red treatment */
+.rank-badge.votes-badge {
+  border-color: rgba(233, 226, 207, 0.3);
+  color: var(--bone);
+  box-shadow: none;
+}
+.status-pill.chosen { color: #fff; background: rgba(179, 18, 43, 0.6); border-color: var(--blood-bright); }
+
+.site-gate { max-width: 340px; margin: 0 auto; }
+.site-gate .btn { padding: 10px 18px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

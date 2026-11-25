@@ -89,6 +89,10 @@
     } catch {
       /* ignore */
     }
+    if (res.status === 401) {
+      location.href = '/gate?next=' + encodeURIComponent(location.pathname);
+      throw new Error('Password needed.');
+    }
     if (!res.ok) {
       const err = new Error((data && data.error) || 'Something went bump in the night.');
       err.data = data;
@@ -180,13 +184,16 @@
         stone.style.rotate = '';
       });
     }
-    if (rank === 0) {
+    // "Next to die" is the admin's decision; vote rank is shown separately.
+    if (p.chosen) {
       grave.classList.add('doomed');
       grave.appendChild(h('div', { class: 'rank-badge', text: '☠ Next to die' }));
       grave.appendChild(h('div', { class: 'candle l' }));
       grave.appendChild(h('div', { class: 'candle r' }));
+    } else if (rank === 0) {
+      grave.appendChild(h('div', { class: 'rank-badge votes-badge', text: 'Most votes' }));
     } else if (rank === 1 || rank === 2) {
-      grave.appendChild(h('div', { class: 'rank-badge', text: `#${rank + 1} on death row` }));
+      grave.appendChild(h('div', { class: 'rank-badge votes-badge', text: `#${rank + 1} most votes` }));
     }
     return grave;
   }

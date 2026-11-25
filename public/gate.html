@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Funeral</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/brand/azoma-mark-purple.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="login-page">
+  <div class="sky" aria-hidden="true">
+    <div class="stars"></div>
+    <div class="moon"></div>
+    <div class="cloud" style="--top:9vh;--w:420px;--dur:140s;--delay:-30s"></div>
+    <div class="cloud" style="--top:15vh;--w:300px;--dur:95s;--delay:-70s"></div>
+  </div>
+  <div class="lightning" aria-hidden="true"></div>
+  <div class="fog three" aria-hidden="true"></div>
+  <div class="fog" aria-hidden="true"></div>
+  <div class="fog two" aria-hidden="true"></div>
+
+  <main class="gate">
+    <div class="gate-stone">
+      <img class="gate-mark" src="/brand/azoma-mark-white.svg" alt="" width="54" height="54">
+      <div class="eyebrow">Azoma · Ceremony of Retirement</div>
+      <h1 class="title gate-title">The Funeral</h1>
+      <p class="gate-sub">Speak the password to enter the graveyard.</p>
+
+      <form class="site-gate" method="post" action="/gate">
+        <input type="hidden" name="next" id="gateNext" value="/">
+        <label class="sr-only" for="sitePassword">Password</label>
+        <div class="dev-row">
+          <input id="sitePassword" name="password" type="password" placeholder="Password" autocomplete="current-password" required autofocus>
+          <button class="btn btn-blood" type="submit">Enter</button>
+        </div>
+      </form>
+
+      <p class="form-error gate-error" id="gateError" role="alert"></p>
+      <p class="gate-note">Your vote is anonymous. The password only keeps strangers out.</p>
+    </div>
+  </main>
+
+  <script src="/ambience.js"></script>
+  <script src="/gate.js"></script>
+</body>
+</html>

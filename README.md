@@ -6,9 +6,9 @@ A spooky graveyard where the team nominates parts of the product to retire, and 
 
 - **Nominate**: name a feature and (optionally) its crimes. Submitting triggers an execution scene: either a hooded executioner splits it with an axe, or the Grim Reaper slices it with a scythe. A drumroll builds as the lights close in, then a hit-stop, slow-motion blood spray, the card halves crash to the ground and the feature's soul floats away. A new tombstone then bursts out of the earth in the graveyard.
 - **Sound**: effects are synthesised in the browser (no audio files). Toggle with the speaker button in the top-left corner; the choice is remembered.
-- **Vote**: click "Kill it" on any tombstone. A scythe sweeps across it and a soul escapes. Click again to spare it. Tombstones crack more as their votes pile up. Graves are ranked by votes; the top one gets candles and a "Next to die" badge. The page refreshes counts every 10 seconds, so it works live on a shared screen.
+- **Vote**: click "Kill it" on any tombstone. A scythe sweeps across it and a soul escapes. Click again to spare it. Tombstones crack more as their votes pile up. Graves show their vote rank ("Most votes", "#2 most votes"). Admins decide what is actually **Next to die**: marked graves get the badge, candles and a red glow. The page refreshes counts every 10 seconds, so it works live on a shared screen.
 - **Laid to Rest**: features the admin marks as retired move to a memorial section.
-- **No sign-in needed** to view, nominate or vote. Anyone with the link can take part.
+- **Site password**: if `SITE_PASSWORD` is set, everyone enters it once (remembered for 30 days) before seeing the graveyard. No accounts needed.
 - **Admin dashboard** at `/admin`: unlocked with `ADMIN_PASSWORD`, or by Google sign-in for the addresses in `ADMIN_EMAILS`. Shows every proposal with vote counts and a bar chart, plus actions to lay to rest, resurrect, reset votes, or remove.
 
 ## Easter eggs

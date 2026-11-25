@@ -3,6 +3,7 @@ SESSION_SECRET=local-dev-session-secret
 BALLOT_SECRET=local-dev-ballot-secret
 ADMIN_EMAILS=you@azoma.ai
 ADMIN_PASSWORD=local-admin-password
+SITE_PASSWORD=local-site-password
 # Skip Google locally: the login page shows an email box instead. Only works on localhost.
 DEV_LOGIN=true
 # To test real Google sign-in locally instead, remove DEV_LOGIN and set:

@@ -12,6 +12,11 @@
 const SESSION_COOKIE = 'funeral_session';
 const STATE_COOKIE = 'funeral_oauth';
 const VOTER_COOKIE = 'funeral_voter';
+const ACCESS_COOKIE = 'funeral_access';
+const ACCESS_TTL = 30 * 24 * 60 * 60;
+// Reachable without the site password: the gate page and what it needs, plus admin Google sign-in.
+const GATE_OPEN_PATHS = new Set(['/gate', '/gate.html', '/gate.js', '/style.css', '/ambience.js', '/favicon.ico']);
+const GATE_OPEN_PREFIXES = ['/brand/', '/auth/'];
 const VOTER_TTL = 5 * 365 * 24 * 60 * 60;
 const SESSION_TTL = 7 * 24 * 60 * 60; // seconds
 const MAX_FEATURE = 80;
@@ -207,6 +212,46 @@ async function getSession(request, env) {
 
 const clientIp = (request) => request.headers.get('CF-Connecting-IP') || 'local';
 
+// ---------------------------------------------------------------- site password gate
+
+// Ties access cookies to the current password, so changing SITE_PASSWORD locks everyone out again.
+async function passwordTag(env) {
+  return (await hmacHex(env.SESSION_SECRET, 'site:' + env.SITE_PASSWORD)).slice(0, 16);
+}
+
+async function hasSiteAccess(request, env) {
+  if (!env.SITE_PASSWORD) return true;
+  const s = await unsign(env.SESSION_SECRET, parseCookies(request)[ACCESS_COOKIE]);
+  return !!s && s.tag === (await passwordTag(env));
+}
+
+async function constantTimeEqual(env, a, b) {
+  const [x, y] = await Promise.all([hmacHex(env.SESSION_SECRET, String(a)), hmacHex(env.SESSION_SECRET, String(b))]);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x.charCodeAt(i) ^ y.charCodeAt(i);
+  return diff === 0;
+}
+
+function safeNext(value) {
+  const v = String(value || '/');
+  return v.startsWith('/') && !v.startsWith('//') && !v.startsWith('/\\') ? v : '/';
+}
+
+async function handleGate(request, env, url) {
+  if (request.method !== 'POST') {
+    if (await hasSiteAccess(request, env)) return redirect(safeNext(url.searchParams.get('next')));
+    return serveAsset(request, env, '/gate.html');
+  }
+  const form = await request.formData().catch(() => null);
+  const next = safeNext(form && form.get('next'));
+  if (!unlockAllowed('gate:' + clientIp(request))) return redirect('/gate?error=limit&next=' + encodeURIComponent(next));
+  if (!form || !(await constantTimeEqual(env, form.get('password') || '', env.SITE_PASSWORD))) {
+    return redirect('/gate?error=wrong&next=' + encodeURIComponent(next));
+  }
+  const token = await sign(env.SESSION_SECRET, { tag: await passwordTag(env), exp: Math.floor(Date.now() / 1000) + ACCESS_TTL });
+  return redirect(next, { 'Set-Cookie': cookie(ACCESS_COOKIE, token, { maxAge: ACCESS_TTL, secure: url.protocol === 'https:' }) });
+}
+
 async function startSession(env, url, email, name, extra = {}) {
   const token = await sign(env.SESSION_SECRET, {
     email: (email || '').toLowerCase(),
@@ -330,13 +375,14 @@ function toView(row, voted) {
     status: row.status,
     createdAt: row.created_at,
     buriedAt: row.buried_at || null,
+    chosen: !!row.chosen,
     hasVoted: !!voted,
   };
 }
 
 async function allProposals(env) {
   const { results } = await env.DB.prepare(
-    `SELECT p.id, p.feature, p.reason, p.status, p.created_at, p.buried_at, COUNT(b.ballot) AS votes
+    `SELECT p.id, p.feature, p.reason, p.status, p.created_at, p.buried_at, p.chosen, COUNT(b.ballot) AS votes
        FROM proposals p LEFT JOIN ballots b ON b.proposal_id = p.id
       GROUP BY p.id`
   ).all();
@@ -454,7 +500,7 @@ async function handleApi(request, env, url, session, voterId) {
       voted = true;
     }
     const row = await env.DB.prepare(
-      `SELECT p.id, p.feature, p.reason, p.status, p.created_at, p.buried_at, COUNT(b.ballot) AS votes
+      `SELECT p.id, p.feature, p.reason, p.status, p.created_at, p.buried_at, p.chosen, COUNT(b.ballot) AS votes
          FROM proposals p LEFT JOIN ballots b ON b.proposal_id = p.id WHERE p.id = ? GROUP BY p.id`
     )
       .bind(id)
@@ -495,7 +541,7 @@ async function handleApi(request, env, url, session, voterId) {
       });
     }
 
-    m = pathname.match(/^\/api\/admin\/proposals\/([0-9a-f-]{36})(\/status|\/reset-votes)?$/);
+    m = pathname.match(/^\/api\/admin\/proposals\/([0-9a-f-]{36})(\/status|\/reset-votes|\/chosen)?$/);
     if (m) {
       const id = m[1];
       const exists = await env.DB.prepare(`SELECT id FROM proposals WHERE id = ?`).bind(id).first();
@@ -511,8 +557,16 @@ async function handleApi(request, env, url, session, voterId) {
       if (m[2] === '/status' && method === 'POST') {
         const { status } = await readBody(request);
         if (status !== 'open' && status !== 'buried') return json({ error: 'Status must be open or buried.' }, 400);
-        await env.DB.prepare(`UPDATE proposals SET status = ?, buried_at = ? WHERE id = ?`)
+        // burying a feature also clears its "next to die" mark
+        await env.DB.prepare(`UPDATE proposals SET status = ?, buried_at = ?, chosen = 0 WHERE id = ?`)
           .bind(status, status === 'buried' ? new Date().toISOString() : null, id)
+          .run();
+        return json({ ok: true });
+      }
+      if (m[2] === '/chosen' && method === 'POST') {
+        const { chosen } = await readBody(request);
+        await env.DB.prepare(`UPDATE proposals SET chosen = ? WHERE id = ? AND status = 'open'`)
+          .bind(chosen ? 1 : 0, id)
           .run();
         return json({ ok: true });
       }
@@ -545,6 +599,14 @@ export default {
 
     for (const k of ['SESSION_SECRET', 'BALLOT_SECRET']) {
       if (!env[k]) return new Response(`Server not configured: ${k} is missing.`, { status: 500 });
+    }
+
+    // Site password (SITE_PASSWORD). Everything except the gate itself waits behind it.
+    if (pathname === '/gate') return env.SITE_PASSWORD ? handleGate(request, env, url) : redirect('/');
+    const gateOpen = GATE_OPEN_PATHS.has(pathname) || GATE_OPEN_PREFIXES.some((p) => pathname.startsWith(p));
+    if (!gateOpen && !(await hasSiteAccess(request, env))) {
+      if (pathname.startsWith('/api/')) return json({ error: 'Enter the site password first.', gate: true }, 401);
+      return redirect('/gate?next=' + encodeURIComponent(pathname + url.search));
     }
 
     if (pathname.startsWith('/auth/')) return handleAuth(request, env, url);
