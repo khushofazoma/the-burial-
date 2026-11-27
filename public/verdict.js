@@ -121,6 +121,7 @@
 
     root.appendChild(inner);
     document.body.appendChild(root);
+    document.body.classList.add('scene-dimmed');
     void root.offsetWidth;
     root.classList.add('play');
     if (reduced) root.classList.add('still');
@@ -148,6 +149,7 @@
         timers.forEach(clearTimeout);
         document.removeEventListener('keydown', onKey);
         root.classList.add('closing');
+        document.body.classList.remove('scene-dimmed');
         setTimeout(() => {
           root.remove();
           active = null;

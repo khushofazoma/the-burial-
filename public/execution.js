@@ -19,6 +19,20 @@
   const screenFlash = $('#screenFlash');
   const skipBtn = $('#skipExec');
   const light = $('#stageLight');
+  const lightLayers = {
+    wide: light.querySelector('.vignette-wide'),
+    tight: light.querySelector('.vignette-tight'),
+    red: light.querySelector('.tint-red'),
+    violet: light.querySelector('.tint-violet'),
+  };
+  // skip DOM writes when the value hasn't visibly changed
+  function setOpacity(el, v) {
+    const val = v < 0.002 ? '0' : v.toFixed(3);
+    if (el._o !== val) {
+      el._o = val;
+      el.style.opacity = val;
+    }
+  }
   const canvas = $('#fx');
   const g = canvas.getContext('2d');
   const axeBlood = document.querySelector('.axe-blood');
@@ -217,22 +231,26 @@
   let scale = 1;
   let dpr = 1;
 
+  // The particle canvas covers 160% of the stage (30% bleed each side) so debris can fly past the edges.
+  const BLEED = 0.3;
+
   function sizeCanvas() {
     const sw = stage.clientWidth;
     const sh = stage.clientHeight;
-    dpr = Math.min(2, window.devicePixelRatio || 1);
-    cw = sw * 2;
-    ch = sh * 2;
+    // particles are soft, so 1.5x is visually identical to 2x on retina and ~45% fewer pixels to clear
+    dpr = Math.min(1.5, window.devicePixelRatio || 1);
+    cw = sw * (1 + BLEED * 2);
+    ch = sh * (1 + BLEED * 2);
     canvas.width = Math.round(cw * dpr);
     canvas.height = Math.round(ch * dpr);
     scale = sw / VB_W;
   }
 
   function toCanvasSpace() {
-    // canvas spans 200% of the stage, offset by -50%; draw in viewBox units
+    // draw in viewBox units, offset by the bleed
     const sw = stage.clientWidth;
     const sh = stage.clientHeight;
-    g.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * sw * 0.5, dpr * sh * 0.5);
+    g.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * sw * BLEED, dpr * sh * BLEED);
   }
 
   const BLOOD = ['#8a0a1c', '#b3122b', '#6d0716', '#d11a36', '#5a0512'];
@@ -418,69 +436,71 @@
     S.rings = S.rings.filter((r) => r.age < r.life);
   }
 
+  // Soft glows are drawn from pre-rendered sprites instead of building a gradient per particle per frame.
+  function makeSprite(inner, outer, size = 64) {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const x = c.getContext('2d');
+    const r = size / 2;
+    const grad = x.createRadialGradient(r, r, 0, r, r, r);
+    grad.addColorStop(0, inner);
+    grad.addColorStop(0.45, outer.replace('A', '0.45'));
+    grad.addColorStop(1, outer.replace('A', '0'));
+    x.fillStyle = grad;
+    x.fillRect(0, 0, size, size);
+    return c;
+  }
+  const SPRITE = {
+    wisp: makeSprite('rgba(220,255,230,1)', 'rgba(125,255,154,A)'),
+    dust: makeSprite('rgba(120,100,90,1)', 'rgba(120,100,90,A)'),
+    ember: makeSprite('rgba(255,230,170,1)', 'rgba(255,120,40,A)', 32),
+  };
+  function blit(sprite, x, y, radius, alpha) {
+    if (alpha <= 0.003) return;
+    g.globalAlpha = alpha;
+    g.drawImage(sprite, x - radius, y - radius, radius * 2, radius * 2);
+  }
+
   function drawScene() {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, canvas.width, canvas.height);
     toCanvasSpace();
+    g.lineCap = 'round';
+
+    // ---- normal blending pass
+    g.globalCompositeOperation = 'source-over';
 
     // splats (persist on the ground and the block)
+    g.globalAlpha = 0.92;
     for (const s of S.splats) {
       g.fillStyle = s.color;
-      g.globalAlpha = 0.92;
       const k = ease.outCubic(s.grow);
       g.beginPath();
       g.ellipse(s.x, s.y, s.r * k, s.r * 0.32 * k, 0, 0, Math.PI * 2);
-      g.fill();
       for (const [bx, by, br] of s.blobs) {
-        g.beginPath();
+        g.moveTo(s.x + bx * k + br * k, s.y + by * k);
         g.ellipse(s.x + bx * k, s.y + by * k, br * k, br * 0.4 * k, 0, 0, Math.PI * 2);
-        g.fill();
       }
+      g.fill();
     }
     g.globalAlpha = 1;
-
-    // weapon motion trail
-    const now = performance.now();
-    S.trail = S.trail.filter((p) => now - p.t < 240);
-    if (S.trail.length > 1) {
-      g.globalCompositeOperation = 'lighter';
-      for (let i = 1; i < S.trail.length; i++) {
-        const a = S.trail[i - 1];
-        const b = S.trail[i];
-        const age = (now - b.t) / 240;
-        const alpha = Math.max(0, 1 - age) * 0.55;
-        const grad = g.createLinearGradient(b.i[0], b.i[1], b.o[0], b.o[1]);
-        grad.addColorStop(0, `rgba(180,190,210,0)`);
-        grad.addColorStop(0.6, `rgba(220,228,245,${alpha * 0.6})`);
-        grad.addColorStop(1, `rgba(255,255,255,${alpha})`);
-        g.fillStyle = grad;
-        g.beginPath();
-        g.moveTo(a.i[0], a.i[1]);
-        g.lineTo(a.o[0], a.o[1]);
-        g.lineTo(b.o[0], b.o[1]);
-        g.lineTo(b.i[0], b.i[1]);
-        g.closePath();
-        g.fill();
-      }
-      g.globalCompositeOperation = 'source-over';
-    }
 
     // shockwave rings
     for (const r of S.rings) {
       const t = r.age / r.life;
-      g.strokeStyle = r.color.replace('A', (1 - t) * r.alpha);
+      const e = ease.outCubic(t);
+      g.strokeStyle = r.color.replace('A', ((1 - t) * r.alpha).toFixed(3));
       g.lineWidth = r.width * (1 - t) + 0.5;
       g.beginPath();
-      g.ellipse(r.x, r.y, r.r * ease.outCubic(t), r.r * r.squash * ease.outCubic(t), 0, 0, Math.PI * 2);
+      g.ellipse(r.x, r.y, r.r * e, r.r * r.squash * e, 0, 0, Math.PI * 2);
       g.stroke();
     }
 
     for (const p of S.parts) {
-      const life = p.age / p.life;
       if (p.kind === 'blood') {
+        g.globalAlpha = 1;
         g.strokeStyle = p.color;
         g.lineWidth = p.size;
-        g.lineCap = 'round';
         g.beginPath();
         g.moveTo(p.x - p.vx * 0.018, p.y - p.vy * 0.018);
         g.lineTo(p.x, p.y);
@@ -491,16 +511,8 @@
           g.arc(p.x - p.size * 0.2, p.y - p.size * 0.2, p.size * 0.22, 0, Math.PI * 2);
           g.fill();
         }
-      } else if (p.kind === 'spark') {
-        g.globalCompositeOperation = 'lighter';
-        g.strokeStyle = `rgba(255,${(220 - life * 120) | 0},${(140 - life * 120) | 0},${1 - life})`;
-        g.lineWidth = 1.6;
-        g.beginPath();
-        g.moveTo(p.x - p.vx * 0.025, p.y - p.vy * 0.025);
-        g.lineTo(p.x, p.y);
-        g.stroke();
-        g.globalCompositeOperation = 'source-over';
       } else if (p.kind === 'paper') {
+        g.globalAlpha = 1;
         g.save();
         g.translate(p.x, p.y);
         g.rotate(p.r);
@@ -508,36 +520,54 @@
         g.fillStyle = '#d9c597';
         g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
         g.restore();
-      } else if (p.kind === 'wisp') {
-        const a = Math.sin(life * Math.PI) * 0.5;
-        const rg = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-        rg.addColorStop(0, `rgba(210,255,222,${a})`);
-        rg.addColorStop(1, 'rgba(125,255,154,0)');
-        g.globalCompositeOperation = 'lighter';
-        g.fillStyle = rg;
-        g.beginPath();
-        g.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        g.fill();
-        g.globalCompositeOperation = 'source-over';
       } else if (p.kind === 'dust') {
-        const a = (1 - life) * 0.28;
-        const rg = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-        rg.addColorStop(0, `rgba(120,100,90,${a})`);
-        rg.addColorStop(1, 'rgba(120,100,90,0)');
-        g.fillStyle = rg;
-        g.beginPath();
-        g.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        g.fill();
-      } else if (p.kind === 'ember') {
-        const a = Math.sin(life * Math.PI) * 0.9;
-        g.globalCompositeOperation = 'lighter';
-        g.fillStyle = `rgba(255,${(170 - life * 90) | 0},60,${a})`;
-        g.beginPath();
-        g.arc(p.x, p.y, 1.4, 0, Math.PI * 2);
-        g.fill();
-        g.globalCompositeOperation = 'source-over';
+        blit(SPRITE.dust, p.x, p.y, p.size, (1 - p.age / p.life) * 0.28);
       }
     }
+
+    // ---- additive pass (light): trail, sparks, glows, embers
+    g.globalCompositeOperation = 'lighter';
+
+    const now = performance.now();
+    S.trail = S.trail.filter((p) => now - p.t < 240);
+    for (let i = 1; i < S.trail.length; i++) {
+      const a = S.trail[i - 1];
+      const b = S.trail[i];
+      const alpha = Math.max(0, 1 - (now - b.t) / 240) * 0.55;
+      if (alpha <= 0.01) continue;
+      const grad = g.createLinearGradient(b.i[0], b.i[1], b.o[0], b.o[1]);
+      grad.addColorStop(0, 'rgba(180,190,210,0)');
+      grad.addColorStop(0.6, `rgba(220,228,245,${(alpha * 0.6).toFixed(3)})`);
+      grad.addColorStop(1, `rgba(255,255,255,${alpha.toFixed(3)})`);
+      g.globalAlpha = 1;
+      g.fillStyle = grad;
+      g.beginPath();
+      g.moveTo(a.i[0], a.i[1]);
+      g.lineTo(a.o[0], a.o[1]);
+      g.lineTo(b.o[0], b.o[1]);
+      g.lineTo(b.i[0], b.i[1]);
+      g.closePath();
+      g.fill();
+    }
+
+    g.lineWidth = 1.6;
+    for (const p of S.parts) {
+      const life = p.age / p.life;
+      if (p.kind === 'spark') {
+        g.globalAlpha = 1;
+        g.strokeStyle = `rgba(255,${(220 - life * 120) | 0},${(140 - life * 120) | 0},${(1 - life).toFixed(3)})`;
+        g.beginPath();
+        g.moveTo(p.x - p.vx * 0.025, p.y - p.vy * 0.025);
+        g.lineTo(p.x, p.y);
+        g.stroke();
+      } else if (p.kind === 'wisp') {
+        blit(SPRITE.wisp, p.x, p.y, p.size, Math.sin(life * Math.PI) * 0.5);
+      } else if (p.kind === 'ember') {
+        blit(SPRITE.ember, p.x, p.y, 3.2, Math.sin(life * Math.PI) * 0.9);
+      }
+    }
+    g.globalAlpha = 1;
+    g.globalCompositeOperation = 'source-over';
   }
 
   // ------------------------------------------------------------------ card halves
@@ -628,14 +658,18 @@
     const oy = shake * sw * 0.03 * noise1(time, noiseSeeds[1]);
     const r = shake * 2.2 * noise1(time, noiseSeeds[2]);
     const z = S.zoom + S.zoomPunch;
-    camera.style.transform = `translate(${ox.toFixed(2)}px, ${oy.toFixed(2)}px) scale(${z.toFixed(4)}) rotate(${r.toFixed(3)}deg)`;
+    camera.style.transform = `translate3d(${ox.toFixed(2)}px, ${oy.toFixed(2)}px, 0) scale(${z.toFixed(4)}) rotate(${r.toFixed(3)}deg)`;
 
+    // Lighting is two fixed vignettes cross-faded by how tight the spotlight is,
+    // plus flat colour tints. Only opacities change, which the compositor handles.
     const flicker = 0.04 * noise1(time * 0.25, 4.2);
-    light.style.setProperty('--dark', (S.dark + flicker).toFixed(3));
-    light.style.setProperty('--r', S.radius.toFixed(2) + '%');
-    light.style.setProperty('--red', S.red.toFixed(3));
+    const dark = Math.min(1, Math.max(0, S.dark + flicker));
+    const tight = Math.min(1, Math.max(0, (34 - S.radius) / 14));
+    setOpacity(lightLayers.wide, dark * (1 - tight));
+    setOpacity(lightLayers.tight, dark * tight);
+    setOpacity(lightLayers.red, S.red);
+    setOpacity(lightLayers.violet, S.violet);
     S.red = Math.max(0, S.red - dt * 0.9);
-    light.style.setProperty('--violet', S.violet.toFixed(3));
     S.violet = Math.max(0, S.violet - dt * 0.3);
   }
 
@@ -723,6 +757,7 @@
   function verdictWord(word, holy = false) {
     big.replaceChildren();
     big.classList.toggle('holy', holy);
+    big.dataset.text = word.toUpperCase();
     [...word.toUpperCase()].forEach((ch, i) => {
       const s = document.createElement('span');
       s.className = 'l';
@@ -960,9 +995,12 @@
     g.clearRect(0, 0, canvas.width, canvas.height);
   }
 
+  let coverTimer = 0;
   function close() {
     const sx = sfx();
     if (sx) sx.droneStop();
+    clearTimeout(coverTimer);
+    document.body.classList.remove('scene-covered');
     overlay.classList.remove('open');
     overlay.setAttribute('aria-hidden', 'true');
     setTimeout(() => {
@@ -1015,6 +1053,9 @@
     }
     overlay.classList.add('open');
     overlay.setAttribute('aria-hidden', 'false');
+    // once the overlay has faded in, the page behind it is fully hidden: stop painting it
+    clearTimeout(coverTimer);
+    coverTimer = setTimeout(() => overlay.classList.contains('open') && document.body.classList.add('scene-covered'), 400);
     sizeCanvas();
     S.running = true;
     lastFrame = performance.now();
