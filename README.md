@@ -8,6 +8,8 @@ A spooky graveyard where the team nominates parts of the product to retire, and 
 - **Sound**: effects are synthesised in the browser (no audio files). Toggle with the speaker button in the top-left corner; the choice is remembered.
 - **Vote**: click "Kill it" on any tombstone. A scythe sweeps across it and a soul escapes. Click again to spare it. Tombstones crack more as their votes pile up. Graves show their vote rank ("Most votes", "#2 most votes"). Admins decide what is actually **Next to die**: marked graves get the badge, candles and a red glow. The page refreshes counts every 10 seconds, so it works live on a shared screen.
 - **Laid to Rest**: features the admin marks as retired move to a memorial section.
+- **The sentencing**: when an admin marks a grave **Next to die**, a full-screen reveal plays (the name rises in and a red wax seal stamped with the month slams down). Anyone with the graveyard open sees it within about 10 seconds, once per browser.
+- **The Book of the Dead**: a month-by-month record of what was sentenced, with the vote count at the time and the outcome (awaiting execution, executed, spared, removed). Public read-only on the graveyard; admins can move an entry to another month or delete it.
 - **Site password**: if `SITE_PASSWORD` is set, everyone enters it once (remembered for 30 days) before seeing the graveyard. No accounts needed.
 - **Admin dashboard** at `/admin`: unlocked with `ADMIN_PASSWORD`, or by Google sign-in for the addresses in `ADMIN_EMAILS`. Shows every proposal with vote counts and a bar chart, plus actions to lay to rest, resurrect, reset votes, or remove.
 

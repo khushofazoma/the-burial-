@@ -376,13 +376,14 @@ function toView(row, voted) {
     createdAt: row.created_at,
     buriedAt: row.buried_at || null,
     chosen: !!row.chosen,
+    chosenAt: row.chosen ? row.chosen_at || null : null,
     hasVoted: !!voted,
   };
 }
 
 async function allProposals(env) {
   const { results } = await env.DB.prepare(
-    `SELECT p.id, p.feature, p.reason, p.status, p.created_at, p.buried_at, p.chosen, COUNT(b.ballot) AS votes
+    `SELECT p.id, p.feature, p.reason, p.status, p.created_at, p.buried_at, p.chosen, p.chosen_at, COUNT(b.ballot) AS votes
        FROM proposals p LEFT JOIN ballots b ON b.proposal_id = p.id
       GROUP BY p.id`
   ).all();
@@ -406,6 +407,27 @@ async function votedSet(env, voterId, rows) {
     for (const r of results) voted.add(byHash.get(r.ballot));
   }
   return voted;
+}
+
+// ---- monthly record of sentenced features
+
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+async function listVerdicts(env) {
+  const { results } = await env.DB.prepare(
+    `SELECT v.id, v.feature, v.votes, v.month, v.chosen_at, p.status, p.chosen
+       FROM verdicts v LEFT JOIN proposals p ON p.id = v.proposal_id
+      ORDER BY v.month DESC, v.chosen_at DESC`
+  ).all();
+  return results.map((r) => ({
+    id: r.id,
+    feature: r.feature,
+    votes: r.votes,
+    month: r.month,
+    chosenAt: r.chosen_at,
+    // outcome follows what happened to the proposal afterwards
+    outcome: !r.status ? 'removed' : r.status === 'buried' ? 'executed' : r.chosen ? 'awaiting' : 'spared',
+  }));
 }
 
 const byVotes = (a, b) => b.votes - a.votes || a.createdAt.localeCompare(b.createdAt);
@@ -436,6 +458,10 @@ async function handleApi(request, env, url, session, voterId) {
 
   if (pathname === '/api/me' && method === 'GET') {
     return json({ admin, email: (session && session.email) || null });
+  }
+
+  if (pathname === '/api/verdicts' && method === 'GET') {
+    return json({ verdicts: (await listVerdicts(env)).map(({ id, chosenAt, ...v }) => v) });
   }
 
   if (pathname === '/api/proposals' && method === 'GET') {
@@ -500,7 +526,7 @@ async function handleApi(request, env, url, session, voterId) {
       voted = true;
     }
     const row = await env.DB.prepare(
-      `SELECT p.id, p.feature, p.reason, p.status, p.created_at, p.buried_at, p.chosen, COUNT(b.ballot) AS votes
+      `SELECT p.id, p.feature, p.reason, p.status, p.created_at, p.buried_at, p.chosen, p.chosen_at, COUNT(b.ballot) AS votes
          FROM proposals p LEFT JOIN ballots b ON b.proposal_id = p.id WHERE p.id = ? GROUP BY p.id`
     )
       .bind(id)
@@ -541,6 +567,21 @@ async function handleApi(request, env, url, session, voterId) {
       });
     }
 
+    if (pathname === '/api/admin/verdicts' && method === 'GET') {
+      return json({ verdicts: await listVerdicts(env) });
+    }
+    const vm = pathname.match(/^\/api\/admin\/verdicts\/([0-9a-f-]{32,36})$/);
+    if (vm && method === 'PATCH') {
+      const { month } = await readBody(request);
+      if (!MONTH_RE.test(String(month))) return json({ error: 'Month must look like 2026-11.' }, 400);
+      await env.DB.prepare(`UPDATE verdicts SET month = ? WHERE id = ?`).bind(month, vm[1]).run();
+      return json({ ok: true });
+    }
+    if (vm && method === 'DELETE') {
+      await env.DB.prepare(`DELETE FROM verdicts WHERE id = ?`).bind(vm[1]).run();
+      return json({ ok: true });
+    }
+
     m = pathname.match(/^\/api\/admin\/proposals\/([0-9a-f-]{36})(\/status|\/reset-votes|\/chosen)?$/);
     if (m) {
       const id = m[1];
@@ -565,9 +606,33 @@ async function handleApi(request, env, url, session, voterId) {
       }
       if (m[2] === '/chosen' && method === 'POST') {
         const { chosen } = await readBody(request);
-        await env.DB.prepare(`UPDATE proposals SET chosen = ? WHERE id = ? AND status = 'open'`)
-          .bind(chosen ? 1 : 0, id)
-          .run();
+        const p = await env.DB.prepare(
+          `SELECT p.feature, p.status, p.chosen, COUNT(b.ballot) AS votes
+             FROM proposals p LEFT JOIN ballots b ON b.proposal_id = p.id WHERE p.id = ? GROUP BY p.id`
+        )
+          .bind(id)
+          .first();
+        if (p.status !== 'open') return json({ error: 'It is already buried.' }, 400);
+        if (chosen && !p.chosen) {
+          const now = new Date().toISOString();
+          const verdict = { id: crypto.randomUUID(), feature: p.feature, votes: p.votes, month: now.slice(0, 7), chosenAt: now };
+          await env.DB.batch([
+            env.DB.prepare(`UPDATE proposals SET chosen = 1, chosen_at = ? WHERE id = ?`).bind(now, id),
+            env.DB.prepare(
+              `INSERT INTO verdicts (id, proposal_id, feature, votes, month, chosen_at) VALUES (?, ?, ?, ?, ?, ?)`
+            ).bind(verdict.id, id, verdict.feature, verdict.votes, verdict.month, now),
+          ]);
+          return json({ ok: true, verdict });
+        }
+        if (!chosen && p.chosen) {
+          // a change of mind: drop the mark and the record it created
+          await env.DB.batch([
+            env.DB.prepare(`UPDATE proposals SET chosen = 0, chosen_at = NULL WHERE id = ?`).bind(id),
+            env.DB.prepare(
+              `DELETE FROM verdicts WHERE id = (SELECT id FROM verdicts WHERE proposal_id = ? ORDER BY chosen_at DESC LIMIT 1)`
+            ).bind(id),
+          ]);
+        }
         return json({ ok: true });
       }
       if (m[2] === '/reset-votes' && method === 'POST') {

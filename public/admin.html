@@ -71,10 +71,33 @@
       <p class="hint" style="color:var(--muted);font-style:italic;margin-top:16px">Votes are anonymous. The ledger shows counts only, never who voted or who nominated.</p>
     </section>
 
+    <section class="admin-panel" id="bookPanel" hidden>
+      <div class="admin-head">
+        <h2>The Book of the Dead</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="ledger">
+          <thead>
+            <tr>
+              <th style="width:170px">Month</th>
+              <th>Sentenced feature</th>
+              <th style="width:120px">Votes then</th>
+              <th style="width:140px">Chosen on</th>
+              <th style="width:170px">Outcome</th>
+              <th style="width:110px"></th>
+            </tr>
+          </thead>
+          <tbody id="bookRows"></tbody>
+        </table>
+      </div>
+      <p class="hint" style="color:var(--muted);font-style:italic;margin-top:16px">Every time you mark something next to die it is recorded here under the current month. Change the month if the decision belongs to a different funeral. Unmarking a feature removes the entry it created.</p>
+    </section>
   </main>
 
   <div class="toast" id="toast" role="status"></div>
+  <script src="/sfx.js"></script>
   <script src="/ambience.js"></script>
+  <script src="/verdict.js"></script>
   <script src="/admin.js"></script>
 </body>
 </html>

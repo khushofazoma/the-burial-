@@ -60,6 +60,7 @@
   }
 
   async function load() {
+    loadBook();
     let data;
     try {
       data = await api('/api/admin/proposals');
@@ -139,15 +140,89 @@
   }
 
   async function setChosen(p, chosen) {
+    if (window.SFX) window.SFX.unlock();
     try {
-      await api(`/api/admin/proposals/${encodeURIComponent(p.id)}/chosen`, {
+      const res = await api(`/api/admin/proposals/${encodeURIComponent(p.id)}/chosen`, {
         method: 'POST',
         body: JSON.stringify({ chosen }),
       });
-      toast(chosen ? `“${p.feature}” is next to die.` : `“${p.feature}” is spared, for now.`);
+      if (chosen && res.verdict) {
+        // don't replay this one when the admin next opens the graveyard
+        try {
+          const key = 'funeral_seen_sentences';
+          const seen = JSON.parse(localStorage.getItem(key) || '[]');
+          seen.push(p.id + ':' + res.verdict.chosenAt);
+          localStorage.setItem(key, JSON.stringify(seen.slice(-100)));
+        } catch {
+          /* storage unavailable */
+        }
+        load();
+        await window.Verdict.play(res.verdict);
+      } else {
+        toast(chosen ? `“${p.feature}” is next to die.` : `“${p.feature}” is spared, for now.`);
+      }
       load();
     } catch (e) {
       toast(e.message);
+    }
+  }
+
+  // ---- the book of the dead
+  const OUTCOMES = { awaiting: 'Awaiting execution', executed: 'Executed', spared: 'Spared', removed: 'Removed' };
+
+  async function loadBook() {
+    let data;
+    try {
+      data = await api('/api/admin/verdicts');
+    } catch {
+      return;
+    }
+    const body = $('#bookRows');
+    body.replaceChildren();
+    if (!data.verdicts.length) {
+      body.appendChild(h('tr', {}, [h('td', { colspan: '6', class: 'empty', text: 'Nobody has been sentenced yet.' })]));
+      return;
+    }
+    for (const v of data.verdicts) {
+      const input = h('input', { type: 'month', class: 'month-input', value: v.month, 'aria-label': 'Month' });
+      input.addEventListener('change', async () => {
+        if (!input.value) return;
+        try {
+          await api(`/api/admin/verdicts/${encodeURIComponent(v.id)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ month: input.value }),
+          });
+          toast(`Moved to ${window.Verdict.monthLabel(input.value)}.`);
+          loadBook();
+        } catch (e) {
+          toast(e.message);
+        }
+      });
+      body.appendChild(
+        h('tr', {}, [
+          h('td', {}, [input]),
+          h('td', {}, [h('div', { class: 'feat', text: v.feature })]),
+          h('td', { class: 'num', text: String(v.votes) }),
+          h('td', { text: fmt(v.chosenAt) }),
+          h('td', {}, [h('span', { class: 'outcome ' + v.outcome, text: OUTCOMES[v.outcome] || v.outcome })]),
+          h('td', {}, [
+            h('button', {
+              class: 'btn btn-danger btn-sm',
+              type: 'button',
+              text: 'Delete',
+              onclick: async () => {
+                if (!confirm(`Delete the record of “${v.feature}” from the book?`)) return;
+                try {
+                  await api(`/api/admin/verdicts/${encodeURIComponent(v.id)}`, { method: 'DELETE' });
+                  loadBook();
+                } catch (e) {
+                  toast(e.message);
+                }
+              },
+            }),
+          ]),
+        ])
+      );
     }
   }
 
@@ -196,6 +271,7 @@
   // ---- password unlock for signed-in users who are not on the admin email list
   function showLock() {
     dash.hidden = true;
+    $('#bookPanel').hidden = true;
     $('#lockBox').hidden = false;
     $('#adminPassword').focus();
   }
@@ -203,6 +279,7 @@
   function showDash() {
     $('#lockBox').hidden = true;
     dash.hidden = false;
+    $('#bookPanel').hidden = false;
     load();
   }
 

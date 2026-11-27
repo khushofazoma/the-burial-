@@ -239,16 +239,98 @@
 
   async function load() {
     try {
-      const data = await api('/api/proposals');
+      const [data, book] = await Promise.all([api('/api/proposals'), api('/api/verdicts')]);
       const json = JSON.stringify(data);
       if (json !== lastJson && !busy) {
         lastJson = json;
         state = data;
         render();
       }
+      renderBook(book.verdicts);
+      if (!busy) revealNewSentences();
     } catch (e) {
       console.error(e);
     }
+  }
+
+  // ----------------------------------------------------------------- the book of the dead
+
+  const OUTCOMES = { awaiting: 'Awaiting execution', executed: 'Executed', spared: 'Spared', removed: 'Removed' };
+  let lastBook = '';
+
+  function renderBook(verdicts) {
+    const json = JSON.stringify(verdicts);
+    if (json === lastBook) return;
+    lastBook = json;
+    const book = $('#book');
+    book.replaceChildren();
+    $('#bookSection').hidden = !verdicts.length;
+    const byMonth = new Map();
+    for (const v of verdicts) {
+      if (!byMonth.has(v.month)) byMonth.set(v.month, []);
+      byMonth.get(v.month).push(v);
+    }
+    for (const [month, entries] of byMonth) {
+      const card = h('div', { class: 'book-month' }, [h('h3', { text: window.Verdict.monthLabel(month) })]);
+      for (const v of entries) {
+        card.appendChild(
+          h('div', { class: 'book-entry' }, [
+            h('span', { class: 'name', text: v.feature }),
+            h('span', { class: 'outcome ' + v.outcome, text: OUTCOMES[v.outcome] || v.outcome }),
+          ])
+        );
+      }
+      book.appendChild(card);
+    }
+  }
+
+  // ----------------------------------------------------------------- the sentencing reveal
+
+  // Play the reveal for graves marked "next to die" recently that this browser hasn't seen yet.
+  const SEEN_KEY = 'funeral_seen_sentences';
+  const REVEAL_WINDOW = 12 * 60 * 60 * 1000;
+  let revealing = false;
+
+  function readSeen() {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'));
+    } catch {
+      return new Set();
+    }
+  }
+  function writeSeen(seen) {
+    try {
+      localStorage.setItem(SEEN_KEY, JSON.stringify([...seen].slice(-100)));
+    } catch {
+      /* storage unavailable */
+    }
+  }
+
+  async function revealNewSentences() {
+    if (revealing || !window.Verdict || document.querySelector('#execution.open')) return;
+    const seen = readSeen();
+    const fresh = state.open.filter((p) => {
+      if (!p.chosen || !p.chosenAt) return false;
+      const key = p.id + ':' + p.chosenAt;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return Date.now() - Date.parse(p.chosenAt) < REVEAL_WINDOW;
+    });
+    writeSeen(seen);
+    if (!fresh.length) return;
+    revealing = true;
+    for (const p of fresh) {
+      await window.Verdict.play({ feature: p.feature, month: p.chosenAt.slice(0, 7), votes: p.votes });
+      const grave = graveyard.querySelector(`[data-id="${CSS.escape(p.id)}"]`);
+      if (grave) {
+        grave.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+        grave.classList.remove('reveal');
+        void grave.offsetWidth;
+        grave.classList.add('reveal');
+        setTimeout(() => grave.classList.remove('reveal'), 2000);
+      }
+    }
+    revealing = false;
   }
 
   // ----------------------------------------------------------------- effects
